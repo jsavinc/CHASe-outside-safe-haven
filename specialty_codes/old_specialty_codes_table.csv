@@ -1,0 +1,45 @@
+old_name,new_name,new_code,old_code
+Accident & Emergency,Accident & Emergency,C2,49
+Thoracic (inc. Cardiac Surgery),Cardiac Surgery,C41,7
+Cardiology,Cardiology,A2,17
+Thoracic (inc Cardiac Surgery),Cardiothoracic Surgery,C4,7
+Radiotherapy (consultative),Clinical Oncology,H2,34
+Infectious Diseases (other than TB)*,Communicable Diseases,A6,31
+Other Acute,Comm Dental Practice,D1,98
+Dermatology,Dermatology,A7,23
+Diagnostic Radiology,Diagnostic Radiology,H1,33
+Metabolic Disease,Endocrinology,A8,18
+ENT Surgery,ENT,C5,3
+Gastroenterology,Gastroenterology,A9,21
+General Medicine,General Medicine,A1,16
+General Surgery,General Surgery,C1,1
+General Surgery,General Surgery (excl. Vascular),C11,1
+VD STD,Genito-Urinary Medicine,AA,32
+Geriatric Assessment,Geriatric Medicine,AB,50
+Geriatric Long Stay,Geriatric Medicine,AB,51
+GP - Acute (other than obstetrics),GP Other than obstetrics,E12,73
+Gynaecology,Gynaecology,F2,42
+Medical Oncology,Medical Oncology,AD,37
+Medical Paediatrics,Medical Paediatrics,AF,40
+Nephrology,Nephrology,AG,24
+Neurology,Neurology,AH,19
+Neurosurgery,Neurosurgery,C6,6
+Opthalmology,Opthalmology,C7,4
+Orthodontics & Paediatric Dentistry,Orthodontics,D5,11
+Orthopaedic Surgery,Orthopaedics,C8,2
+Orthodontics & Paediatric Dentistry,Paediatric Dentistry,D8,11
+Plastic Surgery (inc. Maxillo-facial & Burns,Plastic Surgery,C9,8
+Rehabilitation Physical Medicine,Rehabilitation Medicine,AP,26
+Chest Medicine (other than resp TB),Respiratory Medicine,AQ,28
+Rheumatology,Rheumatology,AR,25
+Surgical Paediatrics,Surgical Paediatrics,CA,39
+Thoracic (inc. Cardiac Surgery),Thoracic Surgery,C42,7
+Urology,Urology,CB,5
+General Surgery,Vascular Surgery,C12,1
+Haematology,Haematology,J4,62
+Homeopathy,Homeopathy,AC,36
+Oral Surgery & Dental Surgery,Oral Medicine,D4,12
+Oral Surgery & Dental Surgery,Oral Surgery,D3,12
+Pain Control (Anaesthetics),Anaesthetics,C3,41
+Clinical Genetics,Clinical Genetics,A3,66
+Restorative Dentistry (from 1991),Restorative Dentistry,D6,13
