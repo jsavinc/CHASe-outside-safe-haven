@@ -1,0 +1,761 @@
+---
+title: "Adjusting AHRQ CCS for use with UK (WHO) ICD codes"
+author: "Jan Savinc"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+    code_folding: show
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Loading R libraries
+
+We'll be using *tidyverse* for data processing.
+
+The *icd* package in R actually implements the CCS already but it won't suit our purposes - we will likely need to truncate the more specific ICD-9-CM & ICD-10-CM codes to make them compatible with the UK (WHO) ICD codes. However, the icd package has other useful functions, such as for converting non-decimal codes to decimal codes.
+
+*knitr* is used for compiling this document!
+
+```{r}
+library(tidyverse)
+library(icd)
+library(knitr)
+library(fuzzyjoin)
+```
+
+# Introduction to CCS
+
+The [https://www.hcup-us.ahrq.gov/tools_software.jsp](AHRQ's Clinical Classification Software (CCS)) comprises of a mapping of all ICD-9-CM and ICD-10-CM codes to a number of diagnostic categories, allowing the grouping of diagnoses for analyses. 
+The ICD-10-CM version is available at [https://www.hcup-us.ahrq.gov/toolssoftware/ccs10/ccs10.jsp](a separate webpage).
+
+The purpose of the CCS is to etablish a manageable number of categories grouping of possible diagnoses, in our case to group mental health conditions into a tractable number of conditions for analys.s
+
+## Single-level vs multi-level CCS
+
+The descriptions below are taken from the CCS User guide [https://www.hcup-us.ahrq.gov/toolssoftware/ccs/CCSUsersGuide.pdf](available here).
+
+> The single-level diagnosis classification scheme aggregates illnesses and conditions into 285 mutually exclusive categories, most of which are clinically homogeneous.
+
+> The [multi-level variant of CCS] expands the single-level CCS into a hierarchical structure referred to as the multi-level CCS. This system groups single-level CCS into broader categories (e.g., Infectious Diseases, Mental Disorders, and Injury). It also splits single-level CCS categories to provide more detail about particular groupings of codes.
+
+Multi-level CCS includes a Mental Disorders category.
+
+## Mental Health & Substance Abuse variant
+
+# Importing master list of WHO ICD codes in use in UK
+
+We've compiled these lists from the UK Biobank data dictionary [https://biobank.ctsu.ox.ac.uk/crystal/coding.cgi?id=87](available online).
+
+```{r}
+who_icd9 <- read_csv("./processed_ICD_codes/master_icd9_code_list_UK(WHO).csv")
+who_icd10 <- read_csv("./processed_ICD_codes/master_icd10_code_list_UK(WHO).csv")
+```
+
+# Importing CCS mapping for ICD-9-CM and ICD-10-CM
+
+The CCS categories were defined for the -CM (Clinical Modification) variant of the ICD classification, in use in the US and elsewhere, but not in the UK.
+
+The ICD-9-CM CCS version **2015** were downloaded from the [https://www.hcup-us.ahrq.gov/toolssoftware/ccs/ccs.jsp#download](AHRQ website).
+
+The ICD-10-CM CCS version **2019.1** were downloaded from the [https://www.hcup-us.ahrq.gov/toolssoftware/ccs10/ccs10.jsp#download](AHRQ website).
+
+```{r}
+ccs_icd9cm <- 
+  read_csv("./raw/$dxref 2015.csv", skip = 1) %>%  # the first row is a note that we ignore when loading data
+  slice(-1) %>%   # remove the effectively blank line
+  rename_all(~gsub(.,pattern="^'|'$",replacement = "")) %>%  # remove single quotes from column names
+  rename_all(~gsub(.,pattern=" |-",replacement = "_")) %>%  # replace spaces & dash with underscore in column names
+  mutate_all(~gsub(.,pattern="^'|'$",replacement = "")) %>%  # single quotes were used in all columns except the code description, so we'll remove those also
+  mutate_all(str_trim) %>%  # remove spaces at either end of data
+  mutate(CCS_CATEGORY = parse_number(CCS_CATEGORY)) %>%  # change CCS category to numeric
+  mutate_at(vars(matches("OPTIONAL")), ~ifelse(.=="",as.character(NA),.)) %>%  # change blank optional labels to NA
+  mutate(ICD_9_CM_CODE_DECIMAL = icd::short_to_decimal(ICD_9_CM_CODE))  # convert to decimal code
+
+ccs_icd10cm <-
+  read_csv("./raw/ccs_dx_icd10cm_2019_1.csv") %>%  # the first row is a note that we ignore when loading data
+  rename_all(~gsub(.,pattern="^'|'$",replacement = "")) %>%  # remove single quotes from column names
+  rename_all(~gsub(.,pattern=" |-",replacement = "_")) %>%  # replace spaces & dash with underscore in column names
+  mutate_all(~gsub(.,pattern="^'|'$",replacement = "")) %>%  # single quotes were used in all columns except the code description, so we'll remove those also
+  mutate_all(str_trim) %>%  # remove spaces at either end of data
+  mutate(CCS_CATEGORY = parse_number(CCS_CATEGORY)) %>%  # change CCS category to numeric
+  mutate(ICD_10_CM_CODE_DECIMAL = icd::short_to_decimal(ICD_10_CM_CODE))  # convert to decimal code
+```
+
+# Checking CCS codes for use with WHO ICD codes in use in UK
+
+The -CM version of ICD is generally speaking more specific & detailed than the base, WHO version in use in UK. The following table shows the number of entries in each of these:
+
+`r tibble(version=c("ICD-9-CM","ICD-9","ICD-10-CM","ICD-10"),num_entries=c(nrow(ccs_icd9cm),nrow(who_icd9),nrow(ccs_icd10cm),nrow(who_icd10))) %>% kable`
+
+There is no straightforward way of mapping the -CM codes to WHO codes. They are required to agree at 4-character level, however, codes in one system are not required to be present in another and vice versa - this means that exact matching will only ever match a subset of codes from both systems.
+
+## An ICD-9 to ICD-9-CM example
+
+Even though ICD-9 and ICD-9-CM codes are supposed to agree at 4th character level, there are a few cases where they don't. For example, ICD-9 3311 Pick's disease corresponds to ICD-9-CM subdivisions, only one of which is equivalent to Pick's disease at 5th digit level: `r ccs_icd9cm %>% filter(str_starts(ICD_9_CM_CODE, pattern="3311")) %>% kable`
+
+## An ICD-10 to ICD-10-CM example
+
+Intentional self-harm in ICD-10 is defined in the range of codes X60-X84. ICD-10-CM only defines codes X71-X83, but self-harm is also denoted at 6th character level in other code ranges, for example: `r ccs_icd10cm %>% filter(str_starts(ICD_10_CM_CODE, pattern="T71112")) %>% kable`. Note how ICD-10-CM also distinguishes initial from subsequent encounters and sequelae of self-harm.
+
+# ICD codes for Mental health, Self-harm, and Undetermined intent
+
+For our purposes, we want to be able to use diagnostic categories in CCS for mental health, self-harm, and undetermined intent codes.
+
+Mental disorder codes in ICD-9 and ICD-10 are in Chapter V:
+
+* ICD-9: codes 290-319
+* ICD-10: codes F00-F99
+
+Self-harm and undetermined intent codes are in:
+
+* ICD-9: suicide & self-inflicted injury E950-E959
+* ICD-9: injury undetermined whether accidentaly or purposely inflicted E980-E989
+* ICD-10: intentional self-harm X60-X84
+* ICD-10: Event of undetermined intent Y10-Y34
+* ICD-10: self-inflicted poisoning undetermined whether intentional or accidental X40-X49
+
+Note from the ICD-10 code listing for section Y10-Y34:
+
+>This section covers events where available information is insufficient to enable a medical or legal authority to make a distinction between accident, self-harm and assault. It includes self-inflicted injuries, but not poisoning, when not specified whether accidental or with intent to harm (X40-X49). Follow legal rulings when available.
+
+The above ranges of codes we'll consider to be the *major* groupings of codes. The CCS goes into mroe detail, and considers other codes, for example ICD-9-CM codes for alcoholism-induced illnesses, or V-codes for observations or test results that also indicate mental ill health or substance abuse. We'll consider these to be  *minor* groups of codes.
+
+The difference between major and minor groupings will be that we will attempt to exhaustively categorise major ICD-9 and ICD-10 codes using CCS categories. With minor codes, we will only attempt to find equivalents to existing CCS codes.
+
+Next we define the subsets of mental health, suicide, self-harm & undetermined intent codes in ICD-9 and ICD-10.
+
+```{r}
+codes_mental_health_icd9 <- 
+  who_icd9 %>%
+  filter(str_sub(code, start=1, end = 3) %in% as.character(290:319)) %>%
+  filter(selectable=="Y")
+  
+codes_self_harm_and_undet_intent_icd9 <-
+  who_icd9 %>%
+  filter(str_sub(code, start=1, end = 4) %in% paste0("E",c(950:959,980:989))) %>%
+  filter(selectable=="Y")
+
+major_codes_icd9 <-
+  bind_rows(
+    codes_mental_health_icd9,
+    codes_self_harm_and_undet_intent_icd9
+  )
+
+codes_mental_health_icd10 <- 
+  who_icd10 %>%
+  filter(str_detect(code, pattern="^F[0-9][0-9]")) %>%
+  filter(selectable=="Y")
+  
+codes_self_harm_and_undet_intent_icd10 <-
+  who_icd10 %>%
+  filter(str_sub(code, start=1, end = 3) %in% c(paste0("X",c(40:49,60:84)),paste0("Y",c(10:34)))) %>%
+  filter(selectable=="Y")
+
+major_codes_icd10 <-
+  bind_rows(
+    codes_mental_health_icd10,
+    codes_self_harm_and_undet_intent_icd10
+  )
+```
+
+# Including undetermined intent codes in CCS
+
+CCS mental health categories are numbered 650-670, which also includes suicide and self-harm as a single category (662).
+
+Undetermined intent codes are defined as their respective external cause category, so we will need to re-assign them to a separate category, 671.
+
+We will subset the mental-health & undetermined intent categories from the CCS only for ease of working.
+
+```{r}
+ccs_icd9cm %>% filter(str_starts(ICD_9_CM_CODE, pattern="E98[0-9]")) %>% head
+ccs_icd10cm %>% filter(str_starts(ICD_10_CM_CODE, pattern="Y[12][0-9]|Y3[0-4]")) %>% head
+ccs_icd10cm %>% filter(str_starts(ICD_10_CM_CODE, pattern="X4[0-9]")) %>% head
+
+ccs_icd9cm_modified <-
+  ccs_icd9cm %>%
+  mutate(
+    CCS_CATEGORY= 
+      if_else(
+      condition = str_starts(ICD_9_CM_CODE, pattern="E98[0-9]"), 
+      true = 671,
+      false = CCS_CATEGORY
+    ),
+    CCS_CATEGORY_DESCRIPTION = if_else(
+      condition = str_starts(ICD_9_CM_CODE, pattern="E98[0-9]"), 
+      true = "Events of undetermined intent",
+      false = CCS_CATEGORY_DESCRIPTION
+    )
+  )
+
+ccs_icd10cm_modified <-
+  ccs_icd10cm %>%
+  mutate(
+    CCS_CATEGORY= 
+      if_else(
+      condition = str_starts(ICD_10_CM_CODE, pattern="Y[12][0-9]|Y3[0-4]"), 
+      true = 671,
+      false = CCS_CATEGORY
+    ),
+    CCS_CATEGORY_DESCRIPTION = if_else(
+      condition = str_starts(ICD_10_CM_CODE, pattern="Y[12][0-9]|Y3[0-4]"), 
+      true = "Events of undetermined intent",
+      false = CCS_CATEGORY_DESCRIPTION
+    )
+  )
+
+ccs_icd9cm_modified %>% filter(CCS_CATEGORY %in% c(650:671)) %>% count(CCS_CATEGORY,CCS_CATEGORY_DESCRIPTION)
+ccs_icd10cm_modified %>% filter(CCS_CATEGORY %in% c(650:671)) %>% count(CCS_CATEGORY,CCS_CATEGORY_DESCRIPTION)
+
+## helper functions for searching icd codes
+remove_dot <- function(x) {gsub(x, pattern="\\.", replacement="")}
+add_caret <- function(x) {paste0("^",x)}
+
+find_prefix_in_ccs_icd9cm <- function(this_code) {
+  ccs_icd9cm_modified %>%
+    filter(str_starts(ICD_9_CM_CODE, remove_dot(this_code)))
+}
+find_prefix_in_ccs_icd10cm <- function(this_code) {
+  ccs_icd10cm_modified %>%
+    filter(str_starts(ICD_10_CM_CODE, remove_dot(this_code)))
+}
+
+find_prefix_in_icd_cm <- function(this_code) {
+  tibble(meaning=
+           sapply(as.character(icd::children(this_code)), function(x) paste(x,icd::explain_code(x),sep=" ")))
+}
+
+find_prefix_in_icd9 <- function(this_code) {
+  who_icd9 %>% filter(str_starts(code,pattern=remove_dot(this_code)))
+}
+find_prefix_in_icd10 <- function(this_code) {
+  who_icd10 %>% filter(str_starts(code,pattern=remove_dot(this_code)))
+}
+
+## define subsets of CCS to do with mental health, self-harm, etc
+ccs_icd9cm_mh <-
+  ccs_icd9cm_modified %>% filter(CCS_CATEGORY %in% c(650:671))
+ccs_icd10cm_mh <-
+  ccs_icd10cm_modified %>% filter(CCS_CATEGORY %in% c(650:671))
+
+## define mapping category number to description
+table_ccs_categories <-
+  ccs_icd10cm_mh %>%  # the icd-10-cm version has complete text descriptions; icd-9-cm has truncated descriptions
+  select(CCS_CATEGORY,CCS_CATEGORY_DESCRIPTION) %>%
+  distinct %>%
+  arrange(CCS_CATEGORY)
+```
+
+In total, there are N=`r nrow(ccs_icd9cm_mh)` ICD-9-CM codes mapped to CCS categories, and N=`r nrow(ccs_icd10cm_mh)` ICD-10-CM codes mapped to CCS categories.
+
+The CCS categories were as follows: `r table_ccs_categories %>% kable`
+
+# Matching WHO ICD codes to CCS ICD -CM codes
+
+## ICD-9
+
+The matching will proceed in steps:
+
+Major codes
+
+1. We will begin by merging CCS categories to the major ICD-9 codes up to 4 characters deep
+2. Where there wasn't a match, we will assign a category based on the code prefix where there is an unambiguous mapping (i.e. all codes starting with 290 have to with dementia/delirium)
+3. The remaining codes will be hand-matched to CCS categories; these will be 5-character codes and a codes where the prefix maps onto different groups (e.g. prefix 300 *Neurotic disorders* maps onto two CCS categories: Anxiety, and Mood disorders)
+
+Minor codes
+
+1. Instead of starting from the ICD-9 master list, we will first subset CCS categories that don't correspond to the major codes
+2. Those CCS codes will be matched exactly to ICD-9 codes
+3. Unmatched codes will be matched by hand, and
+4. Invalid matches will be adjusted
+
+```{r}
+grouped_by_prefix_ccs_icd9cm <-
+  ccs_icd9cm_mh %>%
+  mutate(prefix = str_sub(ICD_9_CM_CODE,1,3)) %>%
+  group_by(prefix, CCS_CATEGORY, CCS_CATEGORY_DESCRIPTION) %>%
+  count
+
+unambiguous_prefix_major_ccs_icd9cm <-
+  grouped_by_prefix_ccs_icd9cm %>%
+  group_by(prefix) %>%
+  filter(prefix %in% c(as.character(290:319),paste0("E",c(95,98)))) %>%
+  filter(n()==1) %>%
+  select(-n)
+
+unambiguous_prefix_minor_ccs_icd9cm <-
+  grouped_by_prefix_ccs_icd9cm %>%
+  group_by(prefix) %>%
+  filter(!prefix %in% c(as.character(290:319),paste0("E",c(95,98)))) %>%
+  filter(n()==1) %>%
+  select(-n)
+
+# ambiguous_prefix_ccs_icd9cm <-
+#   grouped_by_prefix_ccs_icd9cm %>%
+#   group_by(prefix) %>%
+#   filter(n()>1)
+
+major_codes_mapped_icd9_exact <-
+  major_codes_icd9 %>%
+  mutate(prefix = str_sub(code, 1, 3)) %>%
+  left_join(
+    ccs_icd9cm_mh %>% 
+      filter(!str_detect(ICD_9_CM_CODE, pattern="[0-9]{5}")) %>%
+      select(ICD_9_CM_CODE,CCS_CATEGORY), 
+    by=c("code"="ICD_9_CM_CODE")
+    )
+
+major_codes_mapped_icd9_prefix <-
+  major_codes_mapped_icd9_exact %>%
+  filter(is.na(CCS_CATEGORY)) %>%
+  left_join(unambiguous_prefix_major_ccs_icd9cm %>% select(prefix,CCS_CATEGORY), by="prefix", suffix=c(".na","")) %>%
+  select(-matches("\\.na$"))
+
+major_codes_unmapped_icd9 <-
+  major_codes_mapped_icd9_prefix %>%
+  filter(is.na(CCS_CATEGORY)) %>%
+  mutate(
+    CCS_CATEGORY = case_when(
+      code == "2938" ~ 670,
+      code == "3050" ~ 660,
+      str_starts(code,pattern="305") ~ 661,
+      str_starts(code,pattern="300") ~ 651,
+      code == "3072" ~ 655,
+      str_starts(code,pattern="307") ~ 670,
+      str_starts(code,pattern="309") ~ 650,
+      str_starts(code,pattern="3123") ~ 656,
+      str_starts(code,pattern="312") ~ 652,
+      code == "3132" ~ 651,
+      code == "3138" ~ 655,
+      TRUE ~ as.numeric(NA)
+    )
+  )
+
+major_codes_mapped_icd9 <-
+  bind_rows(
+    major_codes_mapped_icd9_exact %>% filter(!is.na(CCS_CATEGORY)),
+    major_codes_mapped_icd9_prefix %>% filter(!is.na(CCS_CATEGORY)),
+    major_codes_unmapped_icd9
+  )
+    
+minor_codes_mapped_icd9_handmapped <-
+  ccs_icd9cm_mh %>%
+  select(-matches("OPTIONAL|DECIMAL")) %>%
+  filter(!str_detect(ICD_9_CM_CODE,pattern="^29[0-9]|^3[01][0-9]|^E9[58]")) %>%
+  left_join(
+    who_icd9 %>% 
+      select(code, meaning) %>% 
+      filter(!str_detect(code, pattern="[0-9]{5}|E[0-9]{4}|V[0-9]{4}")), 
+    by = c("ICD_9_CM_CODE"="code")
+  ) %>%
+  mutate(
+    icd9 = case_when(
+      ICD_9_CM_CODE=="33111" ~ "3311",
+      ICD_9_CM_CODE %in% c("3311","33119","33182") ~ "3318",
+      # str_starts(ICD_9_CM_CODE,pattern="331[02]") ~ ICD_9_CM_CODE,
+      ICD_9_CM_CODE=="33392" ~ "no_map",
+      str_starts(ICD_9_CM_CODE,pattern="5353[01]") ~ "no_map",
+      str_starts(ICD_9_CM_CODE,pattern="6483") ~ "6483",
+      str_starts(ICD_9_CM_CODE,pattern="6484") ~ "6484",
+      str_starts(ICD_9_CM_CODE,pattern="6555") ~ "6555",
+      ICD_9_CM_CODE=="76071" ~ "76076",  # alcohol affecting via milk / placenta
+      str_starts(ICD_9_CM_CODE,pattern="7607") ~ "76077",  # other drugs affecting via milk / placenta
+      str_starts(ICD_9_CM_CODE,pattern="9650") ~ "9650",  # Poisoning by opiates and related narcotics
+      str_starts(ICD_9_CM_CODE,pattern="V11") ~ "V11",  # Personal history of mental disorder
+      str_starts(ICD_9_CM_CODE,pattern="V15") ~ "V15",  # Personal history of psychological trauma
+      ICD_9_CM_CODE=="V1582" ~ "no_map",  # HISTORY OF TOBACCO USE
+      str_starts(ICD_9_CM_CODE,pattern="V403") ~ "V403",  # Other behavioural problems
+      str_starts(ICD_9_CM_CODE,pattern="V628") ~ "no_map",  # suicidal & homicidal ideation
+      ICD_9_CM_CODE=="V6542" ~ "no_map",  # counseling for substance abuse
+      str_starts(ICD_9_CM_CODE,pattern="V710") ~ "V710",  # Mental observation and evaluation 
+      TRUE ~ ICD_9_CM_CODE
+    )
+  )
+
+minor_codes_mapped_icd9 <-
+  minor_codes_mapped_icd9_handmapped %>%
+  filter(icd9!="no_map") %>%
+  select(code=icd9, CCS_CATEGORY) %>%
+  left_join(who_icd9, by="code")
+
+ccs_codes_icd9 <-
+  bind_rows(
+    major_codes_mapped_icd9,
+    minor_codes_mapped_icd9
+  ) %>%
+  left_join(table_ccs_categories, by="CCS_CATEGORY") %>%
+  distinct  # some duplicates created in the process!
+
+# did we capture all major icd-9 codes? = how many major codes are not in the final list?
+who_icd9 %>%
+  filter(str_detect(code,pattern="^29[0-9]|^3[01][0-9]|^E9[58]") & selectable=="Y") %>%
+  anti_join(ccs_codes_icd9, by="code") %>%
+  nrow
+```
+
+## ICD-10
+
+The strategy for ICD-10 will be a little different, since we know there are blocks of codes in one ICD variant that don't have an equivalent in the other.
+
+Major codes
+
+1. Some major codes can already be assigned to the self-harm/undetermined intent categories:
+    * X40-X49 are undetermined intent poisonings
+    * Y10-Y34 are undetermined intent events
+    * X60-X84 are all self-harm codes
+2. Next, we try exact matches at up to 4 characters between major ICD-10 codes and CCS codes
+3. Then we assign a category based on the code prefix where there is an unambiguous mapping (i.e. all codes starting with F10 have to with alcohol abuse)
+4. The remaining unmatched cases will be matched by hand
+
+Minor codes
+
+1. We'll remove the large nubmer of CCS codes beginning with T - they correspond to X-codes in ICD-10 already dealt with above
+2. Starting from the CCS code list, we'll remove all codes that don't correspond to the major groupings
+3. Those codes will be matched exactly to ICD-10 codes
+4. Unmatched codes will be matched by hand, and matches will be checked for validity
+
+```{r}
+major_prefixes_icd10 <- c(
+  paste0("F",formatC(0:99,width = 2,format = "d",flag = "0")),
+  paste0("X",c(40:49,60:84)),
+  paste0("Y",c(10:34))
+)
+
+grouped_by_prefix_ccs_icd10cm <-
+  ccs_icd10cm_mh %>%
+  mutate(prefix = str_sub(ICD_10_CM_CODE,1,3)) %>%
+  group_by(prefix, CCS_CATEGORY, CCS_CATEGORY_DESCRIPTION) %>%
+  count
+
+unambiguous_prefix_major_ccs_icd10cm <-
+  grouped_by_prefix_ccs_icd10cm %>%
+  group_by(prefix) %>%
+  filter(prefix %in% major_prefixes_icd10) %>%
+  filter(n()==1) %>%
+  select(-n)
+
+major_codes_mapped_icd10_selfharm_undet <-
+  major_codes_icd10 %>%
+  mutate(
+    CCS_CATEGORY = case_when(
+      str_detect(code, pattern="^X4|^Y[12]|^Y3[0-4]") ~ 671,  # undetermined intent
+      str_detect(code, pattern="^X[67]|^X8[0-4]") ~ 662,  # suicide/self-harm
+      TRUE ~ as.numeric(NA)  # set everything else to missing
+    )
+  )
+
+major_codes_mapped_icd10_exact <-
+  major_codes_mapped_icd10_selfharm_undet %>%
+  filter(is.na(CCS_CATEGORY)) %>%
+  mutate(prefix = str_sub(code, 1, 3)) %>%
+  left_join(
+    ccs_icd10cm_mh %>% 
+      filter(!str_detect(ICD_10_CM_CODE, pattern="[0-9]{4}")) %>%
+      select(ICD_10_CM_CODE,CCS_CATEGORY), 
+    by=c("code"="ICD_10_CM_CODE"), 
+    suffix=c(".na","")
+    ) %>%
+    select(-matches("\\.na$"))
+
+major_codes_mapped_icd10_prefix <-
+  major_codes_mapped_icd10_exact %>%
+  filter(is.na(CCS_CATEGORY)) %>%
+  left_join(unambiguous_prefix_major_ccs_icd10cm %>% select(prefix,CCS_CATEGORY), by="prefix", suffix=c(".na","")) %>%
+  select(-matches("\\.na$"))
+
+major_codes_unmapped_icd10 <-
+  major_codes_mapped_icd10_prefix %>%
+  filter(is.na(CCS_CATEGORY)) %>%
+  mutate(
+    CCS_CATEGORY = case_when(
+      prefix == "F00" ~ 653,  # Alzheimer's dementia - dementia category
+      code == "F063" ~ 657,  # Mood disorders
+      code == "F065" ~ 659,  # schizo
+      code == "F066" ~ 657,  # Mood
+      code == "F067" ~ 653,  # demetnia & other cognitive
+      code == "F069" ~ 670,  # misc
+      prefix == "F38" ~ 657,  # Mood disorders
+      code == "F431" ~ 651,  # anxiety (ptsd)
+      code == "F432" ~ 650,  # adjustment
+      code == "F480" ~ 670,  # Neurasthenia: misc
+      code == "F61" ~ 658,  # Mixed personality dis: personality
+      prefix == "F62" ~ 658,  # personality
+      prefix == "F83" ~ 654,  # Mixed developmental dis : developmental
+      prefix == "F92" ~ 670,  # Mixed disorders of conduct and emotions: misc
+      code == "F920" ~ 657,  # Depressive conduct disorder : mood
+      prefix == "F98" ~ 655,  # Feeding disorder of infancy and childhood & cluttering: infancy
+      TRUE ~ as.numeric(NA)
+    )
+  )
+
+major_codes_mapped_icd10 <-
+  bind_rows(
+    major_codes_mapped_icd10_selfharm_undet %>% filter(!is.na(CCS_CATEGORY)),
+    major_codes_mapped_icd10_exact %>% filter(!is.na(CCS_CATEGORY)),
+    major_codes_mapped_icd10_prefix %>% filter(!is.na(CCS_CATEGORY)),
+    major_codes_unmapped_icd10
+  ) %>%
+  select(-prefix)
+
+minor_codes_icd10 <-
+  ccs_icd10cm_mh %>%
+  select(ICD_10_CM_CODE, ICD_10_CM_CODE_DESCRIPTION, CCS_CATEGORY) %>%
+  mutate(prefix = str_sub(ICD_10_CM_CODE, 1, 3)) %>%
+  filter(!prefix %in% major_prefixes_icd10) %>%
+  filter(!str_starts(ICD_10_CM_CODE, "T"))  # remove T-codes which are used for poisonings/self-harm in ICD-10-CM
+
+minor_codes_mapped_icd10_exact <-
+  minor_codes_icd10 %>%
+  left_join(
+    who_icd10 %>% 
+      select(code, meaning) %>% 
+      filter(!str_detect(code, pattern="[0-9]{4}")), 
+    by = c("ICD_10_CM_CODE"="code")
+  )
+
+minor_codes_mapped_icd10_handmapped <-
+  minor_codes_mapped_icd10_exact %>%
+  mutate(
+    icd10 = case_when(
+      str_starts(ICD_10_CM_CODE, pattern="G310") ~ "G310", # frontotemporal dementia / picks disease = circumscibed brain atrophy
+      ICD_10_CM_CODE=="G3183" ~ "G318",  # Other specified degenerative diseases of nervous system = lewy bodies dementia
+      str_starts(ICD_10_CM_CODE, pattern="K292") ~ "K292", # alcoholic gastritis
+      str_starts(ICD_10_CM_CODE, pattern="K701") ~ "K701", # alcoholic hepatitis
+      str_starts(ICD_10_CM_CODE, pattern="K703") ~ "K703", # alcoholic cirrhosis
+      str_starts(ICD_10_CM_CODE, pattern="K704") ~ "K704", # alcoholic liver failure
+      str_starts(ICD_10_CM_CODE, pattern="O355") ~ "O355", # alcoholic liver failure
+      ICD_10_CM_CODE=="O906" ~ "O993",  # Postpartum mood disturbance : Mental disorders and diseases of the nervous system complicating pregnancy, childbirth and the puerperium
+      str_starts(ICD_10_CM_CODE, pattern="O993") ~ "O993", # alcohol/drug use during pregnancy: Mental disorders and diseases of the nervous system complicating pregnancy, childbirth and the puerperium
+      str_starts(ICD_10_CM_CODE, pattern="P044") ~ "P044", # Foetus and newborn affected by maternal use of drugs of addiction
+      ICD_10_CM_CODE=="R37" ~ "F529",  # Sexual dysfunction NOS
+      str_starts(ICD_10_CM_CODE, pattern="R418") ~ "R418", # Foetus and newborn affected by maternal use of drugs of addiction
+      str_starts(ICD_10_CM_CODE, pattern="R458") ~ "R458", # Other symptoms and signs involving emotional state
+      str_starts(ICD_10_CM_CODE, pattern="R468") ~ "R468", # Other symptoms and signs involving appearance
+      str_starts(ICD_10_CM_CODE, pattern="Z133") ~ "Z133", # Special screening examination for mental and behavioural disorders
+      str_starts(ICD_10_CM_CODE, pattern="Z134") ~ "Z134", # Special screening examination for certain developmental disorders in childhood
+      str_starts(ICD_10_CM_CODE, pattern="Z728") ~ "Z728", # Other problems related to lifestyle
+      str_starts(ICD_10_CM_CODE, pattern="Z865") ~ "Z865", # Personal history of other mental and behavioural disorders
+      str_starts(ICD_10_CM_CODE, pattern="Z878") ~ "Z878", # Personal history of other specified conditions
+      str_starts(ICD_10_CM_CODE, pattern="Z914") ~ "Z914", # Personal history of psychological trauma, not elsewhere classified
+      str_starts(ICD_10_CM_CODE, pattern="Z918") ~ "Z918", # PPersonal history of other specified risk-factors, not elsewhere classified
+      TRUE ~ ICD_10_CM_CODE
+    )
+  )
+
+minor_codes_mapped_icd10 <-
+  minor_codes_mapped_icd10_handmapped %>%
+  filter(icd10!="no_map") %>%
+  select(code=icd10, CCS_CATEGORY) %>%
+  left_join(who_icd10, by="code")
+
+ccs_codes_icd10 <-
+  bind_rows(
+    major_codes_mapped_icd10,
+    minor_codes_mapped_icd10
+  ) %>%
+  left_join(table_ccs_categories, by="CCS_CATEGORY") %>%
+  distinct  # some duplicates created in the process!
+```
+
+# Checking for duplicates
+
+Are there codes that map to multiple CCS categories? This is because the US-made ICD-10-CM code has more specific 5th digit codes that map onto multiple CCS categories, whereas the WHO ICD-10 version sometimes stops at 4th digit level, so it isn't obvious which CCS category to pick from the multitude. The conversion done by hand may have produced duplicates for this reason:
+
+```{r}
+ccs_codes_icd9 %>% group_by(code) %>% filter(n()>1) %>% count(code)
+ccs_codes_icd10 %>% group_by(code) %>% filter(n()>1) %>% count(code)
+```
+
+Yes, in ICD-10 CCS some codes were mapped to multiple CCS categories!
+
+Let's investigate the individual codes involved:
+
+## O993
+
+```{r}
+find_prefix_in_icd_cm("O993")
+find_prefix_in_ccs_icd10cm("O993") %>% print(n=20)
+find_prefix_in_ccs_icd10cm("O993") %>% count(CCS_CATEGORY_DESCRIPTION)
+find_prefix_in_icd10("O993")
+```
+
+Only some 5th digit codes down from ICD-10-CM O99.3 are mental health-related - specifically alcohol & drug use complicating pregnancy.
+On the other hand, the WHO ICD-10 O99.3 is a mental health & nervous system disease code.
+
+Conclusion: O993 should be categorised as *670 Miscellaneous mental health disorders *
+
+## R418
+
+Only two 5th digit codes in ICD-10-CM down from R418 are mental health related.
+
+```{r}
+find_prefix_in_icd_cm("R418")
+find_prefix_in_ccs_icd10cm("R418") %>% print(n=20)
+find_prefix_in_ccs_icd10cm("R418") %>% count(CCS_CATEGORY_DESCRIPTION)
+find_prefix_in_icd10("R418")
+find_prefix_in_icd10("R41")
+```
+
+ICD-10 lists Anosognosia as a diagnosis covered by R41.8, which could classify it as *653 Delirium dementia and amnestic and other cognitive disorders*. However, ICD-10-CM lists Anosognosia as R41.89, which is categorised as CCS *95 Other nervous system symptoms*.
+
+Conclusion: R418 dropped from mental health CCS categories
+
+## R458
+
+```{r}
+find_prefix_in_icd_cm("R458")
+find_prefix_in_ccs_icd10cm("R458") %>% print(n=20)
+find_prefix_in_ccs_icd10cm("R458") %>% count(CCS_CATEGORY_DESCRIPTION)
+find_prefix_in_icd10("R458")
+find_prefix_in_icd10("R45")
+```
+
+ICD-10-CM R45.8 has several 5h digit subcodes that fall into various mental health categories.
+
+ICD-10 R45.8 lists Suicidal ideation (tendencies) and Anhedonia as diagnoses covered, which in CCS are categorised as *651 Anxiety disorders* and *662 Suicide and intentional self-inflicted injury*, respectively.
+
+This is a judgment call, and I'm going for Suicidal ideation as the more probable diagnosis in these cases - in addition, R45.8 excludes F-codes for specific mental health diagnoses, which means that it's likely that an Anxiety CCS category will be assigned in that case anyway!
+
+Conclusion: R45.8 categorised as *662 Suicide and intentional self-inflicted injury*.
+
+## Z878
+
+```{r}
+find_prefix_in_icd_cm("Z878")
+find_prefix_in_ccs_icd10cm("Z878") %>% print(n=20)
+find_prefix_in_ccs_icd10cm("Z878") %>% count(CCS_CATEGORY_DESCRIPTION)
+find_prefix_in_icd10("Z878")
+find_prefix_in_icd10("Z87")
+```
+
+ICD-10-CM R87.8 has several 5th digit subcodes, of which only 2 are mental-health related in CCS:  Z87891 Personal history of nicotine dependence, and Z87890 Personal history of sex reassignment, as 663 Screening and history of mental health and substance abuse codes, and 670 Miscellaneous mental health disorders, respectively.
+
+ICD-10 Z87.8 is much less specific, and only requires that this would be history of Conditions classifiable to S00-T98: those are Injury, poisoning and certain other consequences of external causes, which does not include self-harm. It therefore isn't clear that this could stand for mental health conditions!
+
+Conclusion: Z878 removed from mental health CCS categories.
+
+## Modifying ICD-10 CCS to remove duplicate mappings
+
+```{r}
+ccs_codes_icd10 <-
+  ccs_codes_icd10 %>%
+  filter(code!="O993" | CCS_CATEGORY == 670) %>%  # keep only row where O993 is mapped to 670
+  filter(code!="R418") %>%  # remove R418 altogether
+  filter(code!="Z878") %>%  # remove Z878 altogether
+  filter(code!="R458") %>%  # remove R458 altogether, to be added again with correct CCS category
+  bind_rows(
+    .,
+    who_icd10 %>% filter(code=="R458") %>% bind_cols(., table_ccs_categories %>% filter(CCS_CATEGORY==663))  # construct a new entry with code R458 and CCS category 663
+  )
+```
+
+# Checking for completeness
+
+Now we can test to see if all the codes we expected to be categorised as mental health related are in the CCS listing of codes.
+
+```{r}
+codes_mental_health_icd10 %>%
+  filter(!code %in% ccs_codes_icd10$code)
+codes_self_harm_and_undet_intent_icd10 %>%
+  filter(!code %in% ccs_codes_icd10$code)
+
+codes_mental_health_icd9 %>%
+  filter(!code %in% ccs_codes_icd9$code)
+codes_self_harm_and_undet_intent_icd9 %>%
+  filter(!code %in% ccs_codes_icd9$code)
+```
+
+Note that as we've seen in checking for duplicates above, some codes that are not major mental health codes are also included in CCS but not checked for!
+
+```{r}
+ccs_codes_icd9 %>%
+  filter(!code %in% codes_mental_health_icd9$code & !code %in% codes_self_harm_and_undet_intent_icd9$code) # %>% View()  # for checking
+ccs_codes_icd10 %>%
+  filter(!code %in% codes_mental_health_icd10$code & !code %in% codes_self_harm_and_undet_intent_icd10$code) # %>% View()  # for checking
+```
+
+## CCS codes as prefixes - do they capture more specific codes in the WHO lists?
+
+```{r}
+# who_icd10 %>%
+#   regex_left_join(
+#     ccs_codes_icd10 %>% mutate(prefix=add_caret(code)), by = c("code"="prefix")
+#   )
+
+# TODO: try to do this in a way that doesn't take too long to compute!
+
+```
+
+No, they don't!
+
+# Update 13 August 2019
+
+Looking at the safe haven data I've discovered that the ICD-10 list I used is incomplete, and therefore also some mappings of mental health related ICD-10 codes to CCS groupings are missing.
+
+In searching for an existing ICD-10 to CCS mapping, I came across this page:
+https://digital.nhs.uk/data-and-information/publications/ci-hub/summary-hospital-level-mortality-indicator-shmi
+
+Specifically, this link provides an ICD-10 to CCS mapping: https://files.digital.nhs.uk/54/3B5CCB/ICD-10%20to%20SHMI%20diagnosis%20group%20lookup%20table.xlsx
+
+However, this uses the older mental health code range, 65-75, instead of the newer 650-670 range. Let's investigate how they match up!
+
+```{r}
+url_uk_mapping <- "https://files.digital.nhs.uk/54/3B5CCB/ICD-10%20to%20SHMI%20diagnosis%20group%20lookup%20table.xlsx"
+file_uk_mapping <- "./raw/ICD-10%20to%20SHMI%20diagnosis%20group%20lookup%20table.xlsx"
+
+url_ahrq_archive <- "https://www.hcup-us.ahrq.gov/toolssoftware/ccs/$DXREF%202008_Archive.csv"
+file_ahrq_archive <- "./raw/$DXREF%202008_Archive.csv"
+
+download_file <- function(url, destination) {
+  if (!file.exists(destination)) {
+    download.file(
+      url=url, 
+      destfile=destination, mode = "wb"
+      )
+  }
+}
+
+download_file(url = url_uk_mapping, destination = file_uk_mapping)
+download_file(url = url_ahrq_archive, destination = file_ahrq_archive)
+
+## import archival ccs mapping
+ccs_icd9cm_archive <-
+  read_csv("./raw/$DXREF%202008_Archive.csv", skip = 1) %>%  # the first row is a note that we ignore when loading data
+  slice(-1) %>%   # remove the effectively blank line
+  rename_all(~gsub(.,pattern="^'|'$",replacement = "")) %>%  # remove single quotes from column names
+  rename_all(~gsub(.,pattern=" |-",replacement = "_")) %>%  # replace spaces & dash with underscore in column names
+  mutate_all(~gsub(.,pattern="^'|'$",replacement = "")) %>%  # single quotes were used in all columns except the code description, so we'll remove those also
+  mutate_all(str_trim) %>%  # remove spaces at either end of data
+  mutate(CCS_CATEGORY = parse_number(CCS_CATEGORY)) %>%  # change CCS category to numeric
+  mutate_at(vars(matches("OPTIONAL")), ~ifelse(.=="",as.character(NA),.)) %>%  # change blank optional labels to NA
+  mutate(ICD_9_CM_CODE_DECIMAL = icd::short_to_decimal(ICD_9_CM_CODE))  # convert to decimal code
+
+## check mapping of MH categories!
+ccs_icd9cm %>%
+  filter(CCS_CATEGORY %in% 650:670) %>%  # take only subset of mental health categories
+  left_join(ccs_icd9cm_archive %>% select(ICD_9_CM_CODE,CCS_CATEGORY_ARCHIVE = CCS_CATEGORY, CCS_CATEGORY_DESCRIPTION_ARCHIVE=CCS_CATEGORY_DESCRIPTION), by="ICD_9_CM_CODE") %>%
+  count(CCS_CATEGORY,CCS_CATEGORY_DESCRIPTION,CCS_CATEGORY_ARCHIVE,CCS_CATEGORY_DESCRIPTION_ARCHIVE)
+
+```
+
+# Conclusions
+
+Now that we've mapped all of the codes, we can write the files and use them for categorising ICD-9 and ICD-10 mental health, self-harm and undetermined intent diagnoses in the wild!
+
+```{r}
+write_csv(
+  table_ccs_categories %>% rename_all(~tolower(.)), path = "./processed_ICD_codes/ccs_category_labels.csv"
+)
+
+write_csv(
+  ccs_codes_icd9 %>% select(code,ccs_category=CCS_CATEGORY), 
+  path = "./processed_ICD_codes/ccs_categories_icd9.csv")
+write_csv(
+  ccs_codes_icd10 %>% select(code,ccs_category=CCS_CATEGORY), 
+  path = "./processed_ICD_codes/ccs_categories_icd10.csv")
+```

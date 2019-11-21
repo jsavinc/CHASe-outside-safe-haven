@@ -1,0 +1,109 @@
+---
+title: "Compiling Scottish population estimates for 1981 to 2018"
+author: "Jan Savinc"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+    code_folding: show
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(readxl)
+```
+
+# Introduction
+
+For estimating incidence rates of adversity and mental ill-health, we need to know the Scottish population estimates for different ages, throughout the years of the CHASe dataset.
+
+The population estimates are provided by National Records of Scotland (NRS) at https://www.nrscotland.gov.uk/statistics-and-data/statistics/statistics-by-theme/population/population-estimates/mid-year-population-estimates/population-estimates-time-series-data.
+
+Specifically, we need the listing of all population estimates by single year of age and sex, 1981 to 2018, here: https://www.nrscotland.gov.uk/files//statistics/population-estimates/time-series/mid-18/mid-year-pop-est-18-time-series-1.zip, or here: https://www.nrscotland.gov.uk/files//statistics/population-estimates/time-series/mid-18/mid-year-pop-est-18-time-series-1.xlsx
+
+Note that the estimates provided are *Mid-year population estimates* for each year.
+
+## There are separate files already
+
+After producing this script, I read further down the NRS page referenced above and discovered that there is already a cleaned version of the data available at https://www.nrscotland.gov.uk/files//statistics/population-estimates/time-series/mid-18/mid-year-pop-est-18-time-series-7.xlsx. This separately lists the population estimates for whole of Scotland broken down by year, sex, and single year age. The estimates are identical, of course.
+
+# Downloading the file
+
+```{r}
+url <- "https://www.nrscotland.gov.uk/files//statistics/population-estimates/time-series/mid-18/mid-year-pop-est-18-time-series-1.xlsx"
+file <- "./raw/mid-year-pop-est-18-time-series-1.xlsx"
+
+if (!file.exists(file)) {
+  download.file(
+    url=url, 
+    destfile=file, mode = "wb"
+    )
+}
+```
+
+## Format of the data
+
+The file is in excel (.xlsx) format. For each year between 1981 and 2018 there is a separate spreadsheet (tab), with a first tab listing the rest, which we can safely ignore
+
+```{r}
+excel_sheets(file)
+
+sheets_of_interest <- excel_sheets(file)[-1]  # remove first entry
+```
+
+# Extracting the relevant data
+
+The structure of each yearly sheet is identical:
+The code headers start at row 3, followed by an empty row, with the data starting at row 5. The first row of data (row 5) contains aggregateed data for all of Scotland for both sexes, with the following rows detailing data broken down by council area. Below there are two further sections of sex-segregated data, with males first, followed by females.
+
+The columns are single years of birth.
+
+For our purposes we need only Scotland-wide data, and ages up to 40.
+
+```{r}
+raw_data <- lapply(sheets_of_interest, FUN = function(x) {
+  read_excel(path=file, sheet=x, trim_ws = TRUE, skip=2) %>% 
+    filter(Persons=="Scotland") %>%  # only extract Scotland-wide data
+    select(-Code, -Persons) %>%
+    mutate_all(as.numeric) %>%  # convert all to numeric
+    mutate(
+      Year=as.numeric(x), # add year info
+      Sex=c("Both","Male","Female")  # add sex
+      )
+}) %>% setNames(., nm=sheets_of_interest)
+```
+
+# Converting to long format
+
+For further processing it is convenient to convert the data to long format - with each row containing one data point (estimate), and the columns denoting the sex, year, etc.
+
+Furthermore, we'll produce two separate tables for total population estimate, and for age-separated data.
+
+```{r}
+population_estimates_total <-
+  raw_data %>% 
+  bind_rows %>%
+  select(Year, Sex, Total = `All Ages`)
+
+population_estimates_total_by_age <-
+  raw_data %>%
+  bind_rows %>%
+  select(-`All Ages`, -`90+`) %>%
+  gather(-Year,-Sex,key="Age", value="Estimate") %>%
+  mutate(Age=as.numeric(Age))
+```
+
+# Saving data to .csv
+
+```{r}
+write_csv(population_estimates_total, path = "./population_estimates/scotland_population_estimates_total_1981-2018.csv")
+write_csv(population_estimates_total_by_age, path = "./population_estimates/scotland_population_estimates_by_age_1981-2018.csv")
+```

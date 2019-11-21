@@ -1,0 +1,91 @@
+---
+title: "Extracting Specialty codes pre-1997"
+author: "Jan Savinc"
+date: "4 November 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(knitr)
+library(tidyverse)
+library(rvest)
+```
+
+# Introduction
+
+The coding dictionary prior to 1997 is spread across the ISD website.
+
+The dictionary for the hospital Specialty codes is at [this ISD website](https://www.ndc.scot.nhs.uk/Dictionary-A-Z/Definitions/index.asp?Search=S&ID=753&Title=SMR1/01%20Specialty%20Codes%20from%201961-96%20(SMR%20METADATA))
+
+## Scraping html
+
+Using *rvest*, we scrape the html code from the website and extract the table
+
+```{r}
+target_url <- "https://www.ndc.scot.nhs.uk/Dictionary-A-Z/Definitions/index.asp?Search=S&ID=753&Title=SMR1/01%20Specialty%20Codes%20from%201961-96%20(SMR%20METADATA)"
+
+website <- read_html(target_url)
+```
+
+## Extracting the table
+
+The first table on the website contains the coding:
+
+```{r}
+target_table_raw <- website %>% html_table(header = TRUE, trim = TRUE) %>% .[[1]]
+```
+
+## Cleanign up the table
+
+To clean up the table, we perform the following steps:
+
+* remove the entries before *80-81*
+* replace all *--* entries with *NA*
+* the 96 & 97 entries represent the new code, so we merge them
+* we take the unique code across the years and define that as the old code
+
+The entries for Clinical Chemistry, Palliative Medicine and Surgical Podiatry didn;t have a code prior to 1997 and are missing from the resulting table
+
+```{r}
+target_table <-
+  target_table_raw %>%
+  select(-one_of(c("61-66", "67-74", "75-77", "78-79"))) %>%
+  rename(old_name="Old Specialty Name", new_name="Coppish Specialty Names") %>%
+  mutate_all(~if_else(.=="--",NA_character_,.)) %>%
+  mutate(
+    new_code = case_when(
+      !is.na(`97`) ~ `97`,
+      !is.na(`96`) ~ `96`,
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  select(-one_of(c("96","97"))) %>%
+  gather(-new_name,-old_name,-new_code, key="year", value="value") %>%
+  filter(!is.na(value)) %>%
+  group_by(old_name) %>%
+  mutate(old_code = paste(unique(value), collapse = ",")) %>%
+  ungroup %>%
+  select(-year, -value) %>%
+  distinct
+```
+
+# Checking table
+
+```{r}
+kable(target_table, caption="Cleaned up Specialty code table")
+```
+
+Some old codes (e.g. *12* for Oral surgery & dental surgery) now map onto multiple codes (Oral surgery & Oral medicine, respectively).
+
+# Saving resulting table
+
+```{r}
+write_csv(target_table, path = "./specialty_codes/old_specialty_codes_table.csv")
+```
+
+
