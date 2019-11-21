@@ -1,0 +1,188 @@
+---
+title: "Extracting ICD-9 codes from CDC materials"
+author: "Jan Savinc"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  pdf_document:
+    toc: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# NOTE: as of 24 April 2019 this document is abandoned!
+
+# ICD-9 from GMWKI tables
+
+TODO: clkean up text, explain
+TODO: time the operations and move to separate doc to avoid re-computing everything again
+
+
+The latest table from 1998 was used from:
+
+https://www.cdc.gov/nchs/nvss/mortality/historical_gmwki.htm
+
+Pages 1-110 contain listings
+
+import using pdftools::pdf_text
+creates a character vector with 1710 elements
+first 110 elements correspond to pages 1-110
+
+```{r}
+ICD9_codes_gmwki_raw <-
+  pdftools::pdf_text("../ICD codes/gmwki_98.pdf") %>%
+  .[1:110] %>%
+  str_split(pattern="\\r\\n") %>%
+  unlist %>%
+  tibble(raw=.) %>%
+  filter(raw!="") %>%  # remove empty rows
+  slice(-(1:8)) #%>%  # first 8 rows are introductory text and can be removed
+
+ICD9_codes_gmwki_raw %>%
+  filter(str_detect(raw, pattern = "^\\s{2}"))
+```
+
+# ICD-9-CM & ICD-10-CM General Equivalence Mapping (GEM)
+
+The General Equivalence Mapping (GEM) is a set of two reference files that show the mapping from ICD-9-CM codes to ICD-10-CM codes and vice versa, where appropriate. We can use these to generate the cross-walk needed for the ICD-9-CM codes identified by Schnitzer et al., 2004 & 2011.
+
+The ICD-10-CM codes identified this way will then need to be mapped further to WHO ICD-10 codes.
+
+## Importing GEM files
+
+The latest GEM files were downloaded from TODO: source
+
+```{r}
+gem_icd9cm <- 
+  read_fwf("./raw/2018_I9gem.txt", 
+           fwf_cols(
+             source = c(1, 5), 
+             target = c(7, 13), 
+             approximate=c(15,15), 
+             no_map=c(16,16), 
+             combination=c(17,17), 
+             scenario=c(18,18), 
+             choice_list=c(19,19) 
+             )
+           )
+
+gem_icd10cm <- 
+  read_fwf("./raw/2018_I10gem.txt", 
+           fwf_cols(
+             source = c(1, 7), 
+             target = c(9, 13), 
+             approximate=c(15,15), 
+             no_map=c(16,16), 
+             combination=c(17,17), 
+             scenario=c(18,18), 
+             choice_list=c(19,19) 
+             )
+           )
+```
+
+## Doing the cross-walk
+
+There are two directions of mapping: a forward mapping, from ICD-9 to ICD-10, and a backward mapping, from ICD-10 to ICD-9. Their semantics are slightly different, but irrelevant for our use - we are concerned with maximising sensitivity.
+
+For our purposes, we will combine candidate codes from both the forward and backward mapping, and manually review them for appropriateness.
+
+The mapping consists of: 
+
+* single entry equivalents, where there is a one-to-one mapping (or multiple one-to-one mappings) for a given code. In these cases, the source code is sufficiently mapped by a single code (or by any of a range of single codes that are sufficiently similar in their meaning).
+* combination entries, where there is a one-to-many mapping (or multiple one-to-many mappings) for a given code. In these cases, multiple target codes need to co-occur to sufficiently cover the meaning implied in the source code.
+
+For our purposes, the above distinction is too complex, and any of the codes involved in any of the mappings will be used instead. For example, consider the ICD-9 code *E904.1, Accident due to lack of food* and its potential mappings:
+
+Forward mapping: `r gem_icd9cm %>% filter(startsWith(source, prefix="E9041"))`
+The no_map flag being 1 means there is no forward mapping available.
+
+Backward mapping: `r gem_icd10cm %>% filter(startsWith(target, prefix="E9041"))`
+A backward mapping to code *T730XXA Starvation, initial encounter* was found, but note that the combination flag is 1, which means this entry is part of a combination entry. The full entry is the following:
+
+`r gem_icd10cm %>% filter(startsWith(source, prefix="T730XXA"))`
+
+As you can see there are two entries in this combination entry. What this means is that to fully map the meaning of ICD-10-CM code *T730XXA Starvation, initial encounter*, both the codes *9942 Effects of hunger* AND *E904.1, Accident due to lack of food* would need to be included.
+
+For our purposes, the (incomplete) backward mapping is sufficient, as we are not concerned with obtaining a fully equivalent mapping.
+
+
+```{r}
+#TODO: migrate to other doc
+
+unmapped_icd9cm_codes_schnitzer_2004 <-
+  schnitzer_2004_not_included_in_agi_2010$icd9code
+
+unmapped_icd9cm_codes_schnitzer_2011 <-
+  schnitzer_2011_not_included_in_agi_2010$icd9code
+
+unmapped_icd9cm_codes_schnitzer_2004_nodecimal <- 
+  unmapped_icd9cm_codes_schnitzer_2004 %>%
+  gsub(., pattern="\\.", replacement = "")  # remove decimal
+
+unmapped_icd9cm_codes_schnitzer_2011_nodecimal <- 
+  unmapped_icd9cm_codes_schnitzer_2011 %>%
+  gsub(., pattern="\\.", replacement = "")  # remove decimal
+
+
+
+gem_icd9cm %>%
+  filter(str_detect(source, pattern=paste(add_caret(unmapped_icd9cm_codes_schnitzer_2004_nodecimal),collapse = "|"))) %>%
+  mutate(
+    source_descr = sapply(source,function(x) icd::explain_code(x)),
+    target_descr = sapply(target,function(x) icd::explain_code(x)),
+    direction="forward"
+    )
+
+gem_icd10cm %>%
+  filter(str_detect(target, pattern=paste(add_caret(unmapped_icd9cm_codes_schnitzer_2004_nodecimal),collapse = "|"))) %>%
+  mutate(
+    source_descr = sapply(source,function(x) icd::explain_code(x)),
+    target_descr = sapply(target,function(x) icd::explain_code(x)),
+    direction = "backward"
+    )
+
+map_forward_schnitzer_2011 <-
+  gem_icd9cm %>%
+  filter(str_detect(source, pattern=paste(add_caret(unmapped_icd9cm_codes_schnitzer_2011_nodecimal),collapse = "|"))) %>%
+  mutate(
+    source_descr = sapply(source,function(x) icd::explain_code(x)),
+    target_descr = sapply(target,function(x) icd::explain_code(x)),
+    direction="forward"
+    )
+
+map_backward_schnitzer_2011 <-
+  gem_icd10cm %>%
+  filter(str_detect(target, pattern=paste(add_caret(unmapped_icd9cm_codes_schnitzer_2011_nodecimal),collapse = "|"))) %>%
+  mutate(
+    source_descr = sapply(source,function(x) icd::explain_code(x)),
+    target_descr = sapply(target,function(x) icd::explain_code(x)),
+    direction="backward"
+    )
+
+#TODO: better way of doing this is to assemble (lapply?) the rows of GEM matching each individual code - that way we can also work out which code was being used as the filter
+map_backward_schnitzer_2011_alt <-
+  lapply(
+    unmapped_icd9cm_codes_schnitzer_2011_nodecimal,
+    FUN = function(x) {
+      gem_icd10cm %>%
+        filter(str_starts(target, pattern=x)) %>%
+        mutate(
+          schnitzer_code = x,
+          schnitzer_descr = icd::explain_code(x),
+          source_descr = sapply(source,function(x) icd::explain_code(x)),
+          target_descr = sapply(target,function(x) icd::explain_code(x)),
+          direction="backward"
+        )
+    } 
+  ) %>%
+  bind_rows
+
+```
+
+```{r}
+save.image(file="./workspaces/codes_from_cdc_materials.RData")
+```
+

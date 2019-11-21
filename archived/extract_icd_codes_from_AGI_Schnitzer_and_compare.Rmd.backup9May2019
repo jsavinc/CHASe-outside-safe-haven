@@ -1,0 +1,1467 @@
+---
+title: Extract ICD code inclusion & exclusion criteria from tables in Gonzalez-Izquierdo et al. 2010, and Schnitzer et
+  al 2011, and compare them
+author: "Jan Savinc"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  pdf_document:
+    toc: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(knitr)
+```
+
+# Intro
+
+TODO: write a brief introduction based on the previous introduction of schnitzer 2011 below
+
+# Rationale for loading complete listing of ICD codes
+
+The reason for importing the complete listing of ICD codes is to assist in extracting the ICD codes used as inclusion/exclusion criteria in previous literature, specifically where ranges of codes were defined, such as "X85 - Y03, Y08 - Y09"; not all codes in the X85 - X99 range are valid codes, for example, and by importing the ocmplete listing, we can generate a range of valid codes. These will be used as predictors in the analysis in the CHASe project.
+
+# Loading ICD codes
+
+The UK uses unmodified WHO-published ICD codes (unlike the US where they use the - CM modification, or Australia, where they use -AM). ICD-9 was used until 1996, and ICD-10 since then. 
+
+## UK codes
+
+These were previously imported from the UK Biobank data, and the processed data is loaded:
+
+```{r}
+icd9_codes_UK <- read_csv("./processed_ICD_codes/master_icd9_code_list_UK(WHO).csv")
+icd10_codes_UK <- read_csv("./processed_ICD_codes/master_icd10_code_list_UK(WHO).csv")
+```
+
+## USA (CM) codes
+
+These are included in the *icd* package for R.
+
+```{r}
+library(icd)
+```
+
+## Parsing code ranges
+
+Sources often supply code definitions as ranges, e.g. *Y08-Y09*. Because of the complicated rules of how codes are defined, ranges need to be parsed into sequences, that is, *Y08-Y09* needs to be turned into the sequence *Y08,Y09*. This is not trivial.
+
+```{r}
+## helper function to generate codes from a range given in a string
+## e.g. given "Y08 - Y09", generate c("Y08", "Y09") 
+## this assume 3-character codes and own't work 
+generate_codes_from_range <- function(codeRangeString) {
+  ## if no hyphen in string, return the string
+  if (!str_detect(codeRangeString, "-|–")) return(codeRangeString)
+  
+  hasLetters <- str_detect(codeRangeString, pattern="[a-zA-Z]")
+  hasDecimals <- str_detect(codeRangeString, pattern="\\.")
+  
+  codes <- toupper(trimws(unlist(str_split(codeRangeString, pattern= "-|–"))))  # extract codes, and sort them
+  numbers <- parse_number(codes)  # extract the numbers and sort them
+  
+  numCharacters <- max(nchar(codes))
+  
+  if (hasLetters) {
+    lettrs <- gsub(codes, pattern="^([a-zA-Z]{1}).*$", replacement = "\\1")
+    lettersAreSame <- lettrs[1] == lettrs[2]
+  }
+  
+  incrementStep <- 1
+  if (hasDecimals) {
+    numDecimalPlaces <-  max(nchar(str_split(codes, pattern = "\\.", simplify = TRUE)[,2]))
+    incrementStep <- 1 / 10^numDecimalPlaces
+  }
+  
+  ## in the simple case where no letters are included, just generate a sequence from the numbers given and pad
+  if (!hasLetters) {
+      ## now we generate the pre-padded sequence of numbers - depending on the format required, they'll be modified next
+    sequenceNumbersPrePadding <- seq(from=numbers[1], to=numbers[2], by=incrementStep)
+    if (hasDecimals) {  # if it has decimals we pad using formatC for decimals, "f"
+      finishedSequence <- formatC(sequenceNumbersPrePadding, format = "f", digits=numDecimalPlaces, width=numCharacters, flag="0")
+    } else {  # if nop decimals, we pad by adding a "0" until desired width is reached
+      finishedSequence <- str_pad(sequenceNumbersPrePadding, width=numCharacters, pad="0")
+    }
+    return(finishedSequence)
+  } else { ## else if it has letters, it's a little more complicated 
+    ## if the letters are the same
+    if (lettersAreSame) {
+      sequencePrePadding <- seq(from=numbers[1], to=numbers[2], by=incrementStep)
+      ## pad the sequence to the required width - 1 to account for the letter, but differently depending on whether there are decimals
+      if (hasDecimals) {
+        paddedSequence <- formatC(sequencePrePadding, format = "f", digits=numDecimalPlaces, width=numCharacters-1, flag="0")
+      } else {
+        paddedSequence <- str_pad(sequencePrePadding, width=numCharacters-1, pad="0")
+      }
+      finishedSequence <- paste0(lettrs[1], paddedSequence)
+      return(finishedSequence)
+    } else { ## if the letters are not the same it's more complex, because we need to generate the sequences between the letters also
+      # TODO: complete this bit from below
+      lettersIndices <- seq.int(from=which(LETTERS==lettrs[1]), to=which(LETTERS==lettrs[2]))
+      lettersSequence <- LETTERS[lettersIndices]
+      
+      ## for the middle sequence between the letters provided, figure out which numbers are needed, they'll go between 0 and a maximum number, e.g.
+      ## for E75 to F12, we need E75-99 and F00-12; for E72.1 to F12.3, we needE72.1-99.9 etc.
+      maxNumber <- (10^(numCharacters - 1)) - 1
+      if (hasDecimals) maxNumber <- (10^(numCharacters-2) - 1) / 10^numDecimalPlaces
+      if (hasDecimals) {
+      numbersSequenceLeftWithpadding <- formatC(seq(from=numbers[1], to=maxNumber, by=incrementStep), width = numCharacters-1, format = "f", flag = "0", digits=numDecimalPlaces)
+      numbersSequenceRightWithpadding <- formatC(seq(from=0, to=numbers[2], by=incrementStep), width = numCharacters-1, format = "f", flag = "0", digits=numDecimalPlaces)
+      numbersSequenceMiddleWithpadding <- formatC(seq(from=0, to=maxNumber, by=incrementStep), width = numCharacters-1, format = "f", flag = "0", digits=numDecimalPlaces)
+      } else {
+      numbersSequenceLeftWithpadding <- formatC(seq(from=numbers[1], to=maxNumber, by=incrementStep), width = numCharacters-1, format = "d")
+      numbersSequenceRightWithpadding <- formatC(seq(from=0, to=numbers[2], by=incrementStep), width = numCharacters-1, format = "d", flag = "0")
+      numbersSequenceMiddleWithpadding <- formatC(seq(from=0, to=maxNumber, by=incrementStep), width = numCharacters-1, format = "d", flag = "0")
+      }
+      
+      finishedSequence <-
+        c(
+          paste0(head(lettersSequence,n=1),numbersSequenceLeftWithpadding),
+          as.vector(unlist(sapply(lettersSequence[c(-1,-length(lettersSequence))], function(x) paste0(x,numbersSequenceMiddleWithpadding)))),
+          paste0(tail(lettersSequence,n=1),numbersSequenceRightWithpadding)
+        )
+      return(finishedSequence)
+    }
+  }
+  # TODO: validate that the resulting codes are icd valid
+}
+```
+
+
+## ICD-10-v5
+
+ICD-10-v5 are the latest ICD codes in use in ISD Scotland. A file with the complete listing of codes was downloaded from [https://www.isdscotland.org/Products-and-Services/Data-Definitions-and-References/National-Reference-Files/], specifically from [https://www.isdscotland.org/Products-and-Services/Data-Definitions-and-References/National-Reference-Files/Nat-Ref-Files/icd10?37839473](this address), and saved to file **/icd_codes/icd10v5.txt**.
+
+### Notes on the ICD-10-v5 format
+
+The layout of the file is described on the [http://www.isdscotland.org/Products-and-Services/Data-Definitions-and-References/National-Reference-Files/SMR-reference-file-layouts.asp#icd10](ISD Scotland website). The file is in a fixed-width format (fwf), which means we can specify the numeric ranges at which to import data.
+
+```{r}
+icd10v5_codes <-
+  read_fwf(file = "./icd_codes/icd10v5.txt", guess_max = 2000,  # this is to suppress warnings for column types
+           fwf_positions(
+             start=c(2,7,11,12,6,13,24), 
+             end = c(5,10,11,12,6,13,97),
+             col_names=c("Code 1","Code 2","Code 1 5th Digit","Code 2 5th Digit","Key Sort","Record Type","Code Description")))
+  # read_table(file = "../ICD codes/icd10v5.txt", n_max = 10)
+```
+
+## ICD-9
+
+ICD-9 was in use before the official change to ICD-10.
+
+Note that I was having trouble finding a computerised list of ICD-9 codes that were not the Clinical Modification (CM) version of the codes in use in the USA. The likeliest candidate for a complete WHO ICD-9 listing I found on the United States CDC website, [ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD-9/]. This is listed separately from the various versions of ICD-9-CM on the CDC website [ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD9-CM/].
+
+The file was downloaded at [ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD-9/ucod.txt] and to file **/icd_codes/icd9.txt**.
+
+### Notes on the ICD-9 format
+
+The layout of the ICD-9 file is not formally described. Each line corresponds to a single entry, with some lines representing chapter headings or lists of inclusions and exclusions for the previous code entry. There are empty lines separating entries. 
+
+```{r}
+icd9_codes_raw <- tibble(
+  raw = read_lines("./icd_codes/icd9.txt", skip=22)  # remove the top level header in lines 1-22
+) %>% 
+  filter(raw!="") %>%
+  mutate(
+    line_type = ifelse(str_detect(raw, pattern="^E{0,1}\\d{3}"),"code",NA)  # a crude filter to determine which entries represent codes
+  ) %>%
+  mutate(
+    Code = gsub(raw, pattern="(^E{0,1}\\d{3}(\\.\\d){0,1})\\s+.*$", replacement = "\\1")
+  )
+```
+
+There are several ranges of codes where a fourth digit means the same for several codes, so they have been grouped instead of being listed individual
+All of those grouped definitions begin with the sentence **The following fourth\[...\]**, as in **The following fourth digits are for use with categories E800-E807 to identify the injured person.** This is followed by an indented list of fourth-digits, with a brief description for each.
+
+We'll extract these chunks from the raw data, and use the code range information and the fourth digits to construct individual listings of codes.
+
+```{r}
+## add label for defining sentence
+icd9_codes_raw <-
+  icd9_codes_raw %>%
+  mutate(
+    line_type = if_else(str_detect(raw, pattern="The following fourth"), "sentence_4th_digit", line_type),
+    Description = gsub(raw, pattern="^\\s*[A-Z]{0-1}\\d+\\s+(\\w.*)$", replacement="\\1")
+  )
+
+icd9_codes_4th_digit_codes_raw <-
+  icd9_codes_raw %>%
+  fill(line_type) %>%
+  filter(line_type=="sentence_4th_digit") %>%
+  mutate(
+    chunk_number = cumsum(ifelse(str_detect(raw, pattern="The following fourth"), 1, 0))
+  ) %>%
+  group_by(chunk_number) %>%
+  mutate(line_type=ifelse(row_number()==1, "header", NA)) %>%
+  ungroup %>%
+  mutate(
+    code_decimal = gsub(raw, pattern="^\\s*(\\.\\d).*$", replacement="\\1"),
+    code_range = ifelse(
+      line_type=="header",
+      gsub(raw, pattern="^.*([A-Z]\\d{3}\\-[A-Z]\\d{3}|\\d{3}\\-\\d{3}).*$", replacement = "\\1"),
+      NA
+    ),
+    code_description = gsub(raw, pattern="^\\s*\\.\\d\\s+(\\w.*)$", replacement="\\1")
+  ) %>%
+  fill(code_range)
+
+icd9_codes_4th_digit_codes <-
+  icd9_codes_4th_digit_codes_raw %>%
+  select(-Code, -Description) %>%
+  filter(str_detect(code_decimal,pattern = "^\\.\\d")) %>%
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      codes <- x$code_range %>% generate_codes_from_range
+      newRows <- cbind(
+        x,
+        Code = paste0(codes,x$code_decimal),
+        Prefix = codes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows() %>%
+  select(Code, Prefix, Description=code_description) %>%
+  left_join(icd9_codes_raw %>% select(Code, Description), by=c("Prefix"="Code"), suffix=c("","_raw")) %>%
+  mutate(Description = paste0(Description_raw," - ",Description)) %>%
+  select(-Description_raw)
+
+## Finally paste them together again
+icd9_codes <-
+  icd9_codes_raw %>%
+  filter(line_type=="code") %>%
+  bind_rows(
+    .,
+    icd9_codes_4th_digit_codes
+  ) %>%
+  arrange(Code) %>%
+  select(-raw)
+```
+
+# Importing ICD inclusion/exclusion criteria from past literature
+
+## Gonzalez-Izquierdo et al. 2010
+
+Arturo Gonzalez-Izquierdo kindly provided the list of ICD codes compiled by his team for the 2010 paper, which is in the file **\\raw_ICD_codes\\CODES - concern groups 2011 v6.xlsx**, specifically in the sheet *Victimization related*.
+
+### Processing Gonzalez-Izquierdo et al. 2010
+
+The spreadsheet is nicely formatted for reading, and we can remove several rows and columns to make importing the data easier.
+Columns 2,3,4 correspond to code description, ICD-10 code, and ICD-9 code, respectively. The data is in rows 2 to 40, which in Excel corresponds to the cell range **B2:B40**.
+
+```{r}
+agi_2010_file <- "./raw/CODES - concern groups 2011 v6.xlsx"
+agi_2010_raw <- read_excel(agi_2010_file, sheet = "Victimization related", trim_ws = TRUE, range = "B2:D40")
+
+agi_2010_processed_long <-
+  agi_2010_raw %>%
+  rename(icd10description=Description, icd10code =`ICD-10 Codes`, icd9code=`ICD-9 CODES`) %>%  # rename to standard names
+  filter(!is.na(icd10description)) %>%  # remove blank rows
+  mutate(  # extract header to include as broad maltreatment type variable
+    maltreatmentTypeAGI2010 = if_else(
+      condition = is.na(icd10code),
+      true = icd10description,
+      false = as.character(NA)
+    )
+  ) %>%
+  fill(maltreatmentTypeAGI2010) %>%  # LOCF on maltreatment type
+  filter(!is.na(icd10code) & !is.na(icd9code)) %>%  # remove header row
+  gather(-icd10description,-maltreatmentTypeAGI2010, key="icd_version", value="code") %>%
+  mutate(icd_version = case_when(
+    icd_version == "icd10code" ~ "ICD-10",
+    icd_version == "icd9code" ~ "ICD-9",
+    TRUE ~ as.character(NA)
+  ))
+```
+
+Some codes have been entered as ranges rather than a list of codes. The ranges need to be expanded.
+
+There will be two steps to this:
+
+1. Split up comma-separated values and put them in separate rows
+2. Split up ranges by generating all values in the range, and checking that all of those are actual ICD codes
+
+```{r}
+## Step 1: split up comma-separaterd values
+
+## Step 1a: find rows with comma-separated values and split them
+
+agi_2010_processed_long.rowsWithCommas <-
+  agi_2010_processed_long %>%
+  filter(str_detect(code,pattern=",")) %>%
+  rename(code_range = code) %>%
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      codes <- x$code_range %>% str_split(., pattern=", ") %>% unlist
+      newRows <- cbind(
+        x,
+        code = codes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows()
+## print the resulting codes to check
+agi_2010_processed_long.rowsWithCommas %>% select(code_range, code) %>% kable(caption="Parsed code ranges with commas in them.")
+
+## Step 1b: find rows without comma-separated values
+
+agi_2010_processed_long.rowsWithoutCommas <-
+  agi_2010_processed_long %>%
+  filter(!str_detect(code,pattern=","))
+
+## Step 1c: join them together again
+
+agi_2010_processed_long <-
+  bind_rows(
+    agi_2010_processed_long.rowsWithCommas %>% select(-code_range),
+    agi_2010_processed_long.rowsWithoutCommas
+  )
+
+## Step 2: split up ranges of codes
+
+## Step 2a: find rows with ranges of codes & deal with them
+
+agi_2010_processed_long.rowsWithCodeRanges <-
+  agi_2010_processed_long %>%
+  filter(str_detect(code, pattern="-|–")) %>%
+  rename(code_range=code) %>%
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      codes <- generate_codes_from_range(x$code_range)
+      newRows <- cbind(
+        x,
+        code = codes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows()
+## print the resulting codes to check
+agi_2010_processed_long.rowsWithCodeRanges %>% select(code_range, code) %>% kable(caption="Parsed code ranges with commas in them.")
+
+## Step 2b: find rows without ranges of codes
+
+agi_2010_processed_long.rowsWithoutCodeRanges <-
+  agi_2010_processed_long %>%
+  filter(!str_detect(code, pattern="-|–"))
+
+## Step 2c: join them together again
+
+agi_2010_processed_long <-
+  bind_rows(
+    agi_2010_processed_long.rowsWithCodeRanges %>% select(-code_range),
+    agi_2010_processed_long.rowsWithoutCodeRanges
+  )
+
+codes_agi_2010 <- agi_2010_processed_long
+
+## now write the file
+write.csv(agi_2010_processed_long, file = "./processed_ICD_codes/AGI_et_al_2010_ICD_codes.csv", row.names = FALSE)
+```
+
+## Schnitzer et al. 2004
+
+This paper sets the precedent to the Schnitzer et al. 2011 paper; in this paper they defined a set of ICD-9-CM definite maltreatment codes, which they would later complement with suggestive codes in the 2011 paper.
+
+The way I extracted the codes was by loading the [HTML version of the paper online](https://www.sciencedirect.com/science/article/pii/S074937970400203X), and copying **Table 1. ICD-9-CM maltreatment codes** to a spreadsheet, **\\raw\\Schnitzer\_et\_al\_2004\_Table1.csv**
+
+### Processing Schnitzer et al. 2004
+
+The table has three headings which need to be removed; then the code needs to be separated from the code description - these are in the format **E123: Description**
+
+```{r}
+schnitzer_2004_file <- "./raw/Schnitzer_et_al_2004_Table1.csv"
+schnitzer_2004_raw <- read.csv(schnitzer_2004_file, header = FALSE, stringsAsFactors = FALSE, strip.white = TRUE)
+
+schnitzer_2004_processed <-
+  schnitzer_2004_raw %>%
+  as_tibble() %>%
+  rename(icd9code = V1) %>%
+  mutate(
+    maltreatmentTypeSchnitzer2004 =  # extract the header based on phrases they begin with
+      if_else(
+        condition = str_starts(icd9code, pattern="Diagnosis codes|External cause of"),
+        true = icd9code,
+        false = as.character(NA)
+          )
+  ) %>%
+  fill(maltreatmentTypeSchnitzer2004) %>%  # LOCF on the header
+  filter(str_starts(icd9code, pattern="Diagnosis codes|External cause of", negate = TRUE)) %>%  # remove headings based on the phrases they begin with
+  mutate(
+    icd9description = gsub(icd9code, pattern="^.*\\: (.*)$", replacement = "\\1"),  # extract description
+    icd9code = gsub(icd9code, pattern="^\\s*(.*)\\:.*$", replacement = "\\1")  # extract code
+  ) %>%
+  select(icd9code, icd9description, maltreatmentTypeSchnitzer2004)
+
+## now write the file
+write.csv(schnitzer_2004_processed, file = "./processed_ICD_codes/Schnitzer_et_al_2004_ICD_codes_icd9cm.csv", row.names = FALSE)
+```
+
+## Schnitzer et al. 2011
+
+[Schnitzer et al 2011](https://doi.org/10.1016/j.chiabu.2010.06.008) provide a list of ICD codes suggestive of child maltreatment, but don't provide the codes in an easily parsed format.
+
+The following is a document of how I extracted the tables and converted them to a usable format.
+
+I tried scraping the web article with no success, so I used a Google Chrome add-on called [*table-to-spreadsheet*](https://chrome.google.com/webstore/detail/table-to-spreadsheet/haidhlbpihfihbjcggmffnmhgiddjcoc) and saved all tables as .xlsx from the paper to folder *schnitzer2011\\raw*.
+
+Note that MS Excel displays a warning about the data being corrupted when you try to open them, but displays the tables just fine - I assume this is the chrome plugin's fault, maybe not following the .xlsx format correctly.
+
+The following tables were taken from the web article:
+
+```{r}
+dirTables <- "./schnitzer2011/raw/"
+dir(dirTables)
+```
+
+
+### Understanding the criteria
+
+Each table is accompanied by additional notes denoted with superscript letters (^a^, ^b^, etc.) which need to be dealt with appropriately and removed from the table contents.
+
+Depending on how we define what codes should count as suggestive of child maltreatment, we would use different tables. Schnitzer et al. 2011 compiled a larger list of suggestive codes through expert consultation and literature review which they then further refined by manually reviewing random samples of 50 cases for each ICD code deemed suggestive, and only retaining those where 66% or more of cases where thought to possibly or probably indicate child maltreatment.
+
+Therefore there are two lists:
+
+ * The prior list of suggestive ICD codes (table A1 in Schnitzer et al 2011) - this list is broader, i.e. a more liberal criterion
+ * The empirically tested list of suggestive ICD codes (table 2 in Schnitzer et al 2011) - this list is narrower, i.e. a more conservative criterion
+
+In addition, there is a further list of possible sexual maltreatment ICD codes that were not present in the dataset reviewed by Schnitzer et al 2011 and so could not be reviewed, yet may still be suggestive.
+
+
+# Processing individual tables
+
+For ease of use in later data analysis, the tables from the Schnitzer et al 2011 paper need to be converted into a format that can be used as a lookup table for use in analysing ICD 9 codes and possibly to map them onto ICD 10 codes.
+
+The tables will be converted to long format, with one row for each ICD code, and all other information in appropriate columns.
+
+All processed tables will be exported to *schnitzer2011\\output*
+
+## Table 2 (narrower/conservative/empirical list of codes)
+
+```{r}
+schnitzer_2011_table2_file <- "./schnitzer2011/raw/Table 2. ICD-9 codes suggestivea of maltreatment.xlsx"
+schnitzer_2011_table2_raw <- read_excel(schnitzer_2011_table2_file, trim_ws = TRUE)
+```
+
+The data is currently in a non-standard format.
+
+We can remove the last 4 columns because they report the percentage of cases confirmed as suggesting maltreatment on review. Additionally, we can remove the first row which contains no relevant information.
+
+```{r}
+schnitzer_2011_inclusions_empirical_raw <-
+  schnitzer_2011_table2_raw %>%
+  select(1:3) %>%  # keeping first 3 columns is same s dropping final 4 columns
+  slice(-1)  # remove 1st row
+```
+
+The type of maltreatment is currently a heading separating rows, but it should be added as a column instead. For this we use a last observation carried forward (LOCF), from *tidyr* library (*tidyr::fill*). Finally we remove the rows that were used for headers.
+
+```{r}
+schnitzer_2011_inclusions_empirical <-
+  schnitzer_2011_inclusions_empirical_raw %>%
+  mutate(
+    maltreatmentTypeSchnitzer2011 =  # make a new column for type of maltreatment, using those rows that were used as headers
+      ifelse(
+        test = str_detect(`ICD-9 code`, "^ICD\\-9"),  # headers begin with string "ICD-9"
+        yes = `ICD-9 code`,
+        no = NA
+      )
+  ) %>%
+  fill(maltreatmentTypeSchnitzer2011) %>%  # LOCF on maltreatment type
+  filter(!str_detect(`ICD-9 code`, "^ICD\\-9"))  # remove header rows
+```
+
+Next we deal with with the table notes denoted in the paper by superscript letters (^a^, ^b^).
+From the paper:
+
+> a
+> The suggestive codes are those where more than 66% of records reviewed were classified as probable or possible maltreatment.
+>
+> b
+> Designates a code with a sample size of less than 5.
+
+Superscript ^a^ was only used in the description of the table, and superscript ^b^ has no bearing on the criteria. This means we can safely remove them from the final table.
+
+```{r}
+schnitzer_2011_inclusions_empirical <-
+  schnitzer_2011_inclusions_empirical %>%
+  mutate(
+    icd9description =  # use reg.ex. to find b in final position and remove it
+      gsub(`Code description`, pattern = "^(.*)b$", replacement = "\\1")
+  )
+```
+
+Next we deal with rows where multiple codes are denoted in same row. This includes cases where they are delimited by commas, and cases where a range is listed.
+
+```{r}
+schnitzer_2011_inclusions_empirical.singleCodes <-
+  schnitzer_2011_inclusions_empirical %>%
+  filter(!str_detect(`ICD-9 code`, pattern=",|-|–")) %>%  # mid-length dash is used in the original table
+  mutate(icd9code = `ICD-9 code`)
+  
+schnitzer_2011_inclusions_empirical.multipleCodes <-
+  schnitzer_2011_inclusions_empirical %>%
+  filter(str_detect(`ICD-9 code`, pattern=", ")) %>%
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      codes <- x$`ICD-9 code` %>% str_split(., pattern=", ") %>% unlist
+      newRows <- cbind(
+        x,
+        icd9code = codes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows()
+
+schnitzer_2011_inclusions_empirical.rangeCodes <-
+  schnitzer_2011_inclusions_empirical %>%
+  filter(str_detect(`ICD-9 code`, pattern="-|–")) %>%
+  cbind(
+    ., 
+    icd9code = 
+      str_split(.$`ICD-9 code`, pattern = "–") %>% 
+      unlist %>% 
+      as.numeric %>% 
+      (function(x) seq(from=min(x), to=max(x), by=1)) %>%
+      as.character(),
+    stringsAsFactors = FALSE
+    ) %>%
+  as_tibble()
+
+schnitzer_2011_inclusions_empirical_processed <-
+  bind_rows(
+    schnitzer_2011_inclusions_empirical.singleCodes,
+    schnitzer_2011_inclusions_empirical.multipleCodes,
+    schnitzer_2011_inclusions_empirical.rangeCodes
+    ) %>%
+  select(-`ICD-9 code`)  # remove the unformatted ICD-9 code - we now have a clean version, one code per row
+```
+
+We also clean up the age criteria, all of which are an upper bound only.
+
+```{r}
+schnitzer_2011_inclusions_empirical_processed <-
+  schnitzer_2011_inclusions_empirical_processed %>%
+  mutate(
+    AgeLessThan = parse_number(`Age included (years)`)
+    ) %>%  # while we're at it, also rename the column Code description to be in line with csv variable name convention (no spaces)
+  select(icd9code, icd9description, AgeLessThan, maltreatmentTypeSchnitzer2011)
+```
+
+We'll add the automatically looked-up code descriptions using the R **icd** package, which covers ICD-9-CM codes.
+
+```{r}
+schnitzer_2011_inclusions_empirical_processed <-
+  schnitzer_2011_inclusions_empirical_processed %>%
+  mutate(
+    icd9AutomaticDescription = sapply(icd9code, function(x) icd::explain_code(x))
+  )
+```
+
+Now Table 2 can be exported as .csv for later use as a lookup table in including/excluding cases.
+
+```{r}
+# TODO: include the unobserved sexual maltreatment criteria
+# TODO: add more columns if needed
+# TODO: change the age column to be age upper bound, and add an age lower bound, for example
+# TODO: make the conversion of single, multiple & ranged icd codes more elegant
+
+write.csv(schnitzer_2011_inclusions_empirical_processed, file = "./processed_ICD_codes/Schnitzer_et_al_2011_empirical_inclusions_icd9cm.csv", row.names = FALSE)
+```
+
+## Exclusion criteria
+
+Like with inclusion criteria, we compile a table of exclusion criteria. These are extracted from *Tables A2* & *A3*, and are likewise in a one code per row format, except there are two columns of codes - one for the inclusion criterion and another for the exclusion criterion.
+
+*Table A2* lists the same (hopefully!) criteria we've extracted from *Table 2* above, but with added exclusions. There is an additional note to exclude some codes where the 4th digit is .6 or.7, denoted by superscript *b*; superscript *a* refers to cases whgere N<5 cases were reported in the paper and can be safely removed. Additionally, there is an entry in Table A2 which lists an additional requirement for code **E869.4 Second-hand tobacco smoke** to include at least one from a list of codes. This will be included in a separate table of additional requirements.
+
+
+*Table A3* lists all exclusion criteria for ICD-9-CM code **262: Other severe malnutrition**, so those will need to be added. 
+
+```{r}
+# TODO: make the exclusion table
+# TODO: implement exceptions like "except if 4th digit is .6 or .7" - ICD codes 
+
+schnitzer_2011_table2a_file <- "./schnitzer2011/raw/Table A2. Included ages, co-occurring exclusion codes and calculated weights for ICD-9-CM codes suggestive of maltreatment.xlsx"
+schnitzer_2011_table2a_raw <- read_excel(schnitzer_2011_table2a_file, trim_ws = TRUE)
+
+schnitzer_2011_table3a_file <- "./schnitzer2011/raw/Table A3. Exclusions for use with the nutritional deficiency and failure to thrive ICD-9-CM codes.xlsx"
+schnitzer_2011_table3a_raw <- read_excel(schnitzer_2011_table3a_file, trim_ws = TRUE)
+```
+
+## Table A3
+
+We start with Table A3 first because it is simpler! It is again a case of parsing out codes that have been denoted as ranges of codes; we do this by separately dealing with single codes and codes that include a hyphen. There were no comma-separated codes listed.
+
+Note that because Schnitzer et al. 2011 reported ICD-9-CM codes, we can use the *icd::expand_range* function to parse ranges of ICD codes - note also that the argument *defined = FALSE* needs to be used, as not all codes reported by Schnitzer were valid ICD-9-CM codes in all versions of ICD-9-CM, but we want to capture any possible morbidity defined by those ranges.
+
+```{r}
+## Check that there are indeed no comma-separated codes
+schnitzer_2011_table3a_raw %>%
+  filter(str_detect(Code,",")) %>%
+  nrow
+
+schnitzer_2011_malnutrition_exclusions_singleCodes <-
+  schnitzer_2011_table3a_raw %>%
+  filter(!str_detect(Code, pattern=",|-|–"))  # mid-length dash is used in the original table
+
+schnitzer_2011_malnutrition_exclusions_rangeCodes <-
+  schnitzer_2011_table3a_raw %>%
+  filter(str_detect(Code, pattern="-|–")) %>%
+  rename(code_range=Code) %>%
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      # codes <- x$code_range %>% generate_codes_from_range
+      code1 <- str_split(x$code_range,pattern = "–|-", simplify = TRUE)[1]
+      code2 <- str_split(x$code_range,pattern = "–|-", simplify = TRUE)[2]
+      parsedCodes <- icd::expand_range(code1,code2, defined=FALSE)  # Schnitzer et al. 2011 used ICD-9-CM so we can use the icd package. Great!
+      newRows <- cbind(
+        x,
+        Code = parsedCodes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows()
+
+schnitzer_2011_malnutrition_exclusions_processed <-
+  bind_rows(
+    schnitzer_2011_malnutrition_exclusions_singleCodes,
+    schnitzer_2011_malnutrition_exclusions_rangeCodes %>% select(-code_range)
+  ) %>%
+  select(
+    exclude_if_any = Code,
+    icd9description = Condition
+  )
+
+schnitzer_2011_malnutrition_exclusions_processed_numrows <-
+  tibble(
+    Source=c("Single codes","Ranges of codes","Total"),
+    "Number of rows" = c(
+      nrow(schnitzer_2011_malnutrition_exclusions_singleCodes),
+      nrow(schnitzer_2011_malnutrition_exclusions_rangeCodes),
+      nrow(schnitzer_2011_malnutrition_exclusions_processed)
+    )
+  )
+  
+```
+
+This gives us a total of this many rows:  `r kable(schnitzer_2011_malnutrition_exclusions_processed_numrows)`
+
+```{r}
+## Write the file
+write.csv(schnitzer_2011_malnutrition_exclusions_processed, file = "./processed_ICD_codes/Schnitzer_et_al_2011_malnutrition_(262)_exclusions_icd9cm.csv", row.names = FALSE)
+```
+
+
+## Table A2
+
+There is an additional note to exclude some codes where the 4th digit is .6 or.7, denoted by superscript *b*; superscript *a* refers to cases whgere N<5 cases were reported in the paper and can be safely removed. Additionally, there is an entry in Table A2 which lists an additional requirement for code **E869.4 Second-hand tobacco smoke** to include at least one from a list of codes. This will be included in a separate table of additional requirements.
+
+
+Not all entries in Table A2 also have exclusion codes (or extra requirements), so we remove ones that don't to begin with.
+
+```{r}
+schnitzer_2011_exclusions_empirical_raw <- 
+  schnitzer_2011_table2a_raw %>%
+  select(exclusions=`Co-Occurring exclusion codes`, Code, Condition, -Weight, -`Age included`) %>%  # rename exclusions and  remove the irrelevant Weight amd age columns
+  filter(!is.na(exclusions))  # remove rows where no exclusion code was provided
+```
+
+## Additional inclusion requirements
+
+We'll start by compiling the table of extra inclusion requirements, which can be spotted in table A2 by the phrase *Include only* in the exclusions column:
+
+```{r}
+schnitzer_2011_inclusions_empirical_extra_requirements <-
+  schnitzer_2011_exclusions_empirical_raw %>%
+  filter(str_detect(exclusions, pattern="Include only")) %>%  # the phrase denoting additional code requirements
+  mutate(exclusions = sub(exclusions, pattern="Include only with co-occurring code\\: ", replacement="")) %>%  # remove the preceding sentence
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      codes <- x$exclusions %>% 
+        str_split(., pattern="; or |, |; ") %>% 
+        unlist
+      newRows <- cbind(
+        x,
+        code_range = codes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows() %>%  # we now have separate ranges of codes
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      code1 <- str_split(x$code_range,pattern = "–|-", simplify = TRUE)[1]
+      code2 <- str_split(x$code_range,pattern = "–|-", simplify = TRUE)[2]
+      parsedCodes <- icd::expand_range(code1,code2, defined=FALSE)  # Schnitzer et al. 2011 used ICD-9-CM so we can use the icd package. Great!
+      newRows <- cbind(
+        x,
+        extra_required = parsedCodes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows()
+
+schnitzer_2011_inclusions_empirical_extra_requirements_processed <-
+  schnitzer_2011_inclusions_empirical_extra_requirements %>%
+  select(
+    qualifying_code = Code,
+    any_other_required = extra_required
+    )
+```
+
+This gives us `r nrow(schnitzer_2011_inclusions_empirical_extra_requirements_processed)` extra codes, at least one of which must also be present in addition to code `r unique(schnitzer_2011_inclusions_empirical_extra_requirements_processed$qualifying_code)`.
+
+```{r}
+## Write the file
+write.csv(schnitzer_2011_inclusions_empirical_extra_requirements_processed, file = "./processed_ICD_codes/Schnitzer_et_al_2011_extra_requirements_icd9cm.csv", row.names = FALSE)
+```
+
+## Exclusions
+
+Now that we've processed the extra requirements, we can remove that row from the remaining data, and the entry for malnutrition which specifies an entire separate table.
+
+```{r}
+schnitzer_2011_exclusions_empirical_raw_remaining <-
+  schnitzer_2011_exclusions_empirical_raw %>%
+  filter(!str_detect(exclusions, pattern="Include only")) %>%  # the phrase denoting additional code requirements
+  filter(!str_detect(exclusions, pattern="See Table")) %>%  # the phrase denoting the separate malnutrition exclusions
+  mutate(entry_index = 1:n())  # add entry index for use in emrging later
+```
+
+We have `r nrow(schnitzer_2011_exclusions_empirical_raw_remaining)` rows with a mixture of specified single codes, code ranges, and semi-colon separated codes and code ranges.
+
+Included are code ranges with superscript *b* denoting exclusion codes:
+
+>Unless 4th digit = .6 or.7.
+
+The *b* always follows the second code in a range, i.e.: E815–E819^b^. This means that we generate full range of specified codes, and remove cases where 4th digit is .6 or .7 where noted.
+
+Note also that all ranges where superscript *b* applies are listed as an interrupted range, separated by a comma: *E810–E813, E815–E819b*; superscript *b* applies to both of these ranges.
+
+This means there are now these cases:
+ * Single code entries
+ * Semicolon-separated entries
+    + Single codes
+    + Code ranges
+    + Interrupted code ranges, separated by comma
+
+We'll first process the semicolon-separated entries, which allows us to group single codes and code ranges together, and then also to deal with comma-separated ranges and superscript *b* cases.
+
+UPDATE 9 May 2019: a different approach
+Instead of compiling these line-by-line, we can group the exclusion codes, process them individually, and then re-merge them with the target codes. We'll split the codes with semicolons into separate rows, and it should be obvious afterwards that there's only a small number of groups of exclusion codes to deal with that repeat throughout the table.
+
+## Remove superscript ^a^ from codes as it has no bearing on our project
+
+```{r}
+schnitzer_2011_exclusions_empirical_superscript_a <-
+  schnitzer_2011_exclusions_empirical_raw_remaining %>%
+  mutate(
+    Condition = sub(Condition, pattern="a$", replacement="")  # remove final a in Conditions that include it
+  )
+```
+
+
+First we deal with the target codes, some of which were multiple codes separated by commas, or a range of codes denoted with a hyphen.
+
+## Separating comma-separated target codes & target codes defined as ranges of codes
+
+```{r}
+## helper function to expand range codes eg "960-978" into numeric range...
+## and collapse to string eg "960,961,962"
+expand_range_to_csv <- function(this_range) {
+  this_range %>% 
+   str_split(., pattern="–|-") %>% 
+   unlist %>% 
+   trimws %>% 
+   as.numeric %>% 
+   {seq(from=min(.), to=max(.), by=1)} %>%
+   paste(., collapse=",")
+}
+
+schnitzer_2011_exclusions_empirical_separated_targets <-
+  schnitzer_2011_exclusions_empirical_superscript_a %>%
+  mutate(
+    Code = 
+      sapply(Code, USE.NAMES = FALSE, 
+             FUN= function(x) if (str_detect(x, pattern="–|-")) expand_range_to_csv(x) else x)
+    ) %>%
+  separate_rows(Code, sep=",") %>%  # separate comma-separated codes
+  mutate(Code = trimws(Code))  # remove spaces either sides of code if they were introduced by separating rows
+```
+
+## Separating exclusions
+
+Next we deal with the exclusions. We'll put semicolon separated values in separate rows to begin with, add an id, and then deal with them individually.
+
+```{r}
+schnitzer_2011_exclusions_empirical_separated_semicolon_exclusions <-
+  schnitzer_2011_exclusions_empirical_separated_targets %>%
+  separate_rows(exclusions, sep="; ")
+
+lookup_table_separated_schnitzer_2011_exclusions <-
+  schnitzer_2011_exclusions_empirical_separated_semicolon_exclusions %>%
+  select(exclusions) %>%
+  distinct %>%
+  arrange(nchar(exclusions)) %>%
+  mutate(exclusion_index = 1:n())
+
+lookup_table_index_schnitzer_2011 <-
+  schnitzer_2011_exclusions_empirical_separated_semicolon_exclusions %>%
+  select(exclusions, entry_index) %>%
+  left_join(lookup_table_separated_schnitzer_2011_exclusions, by="exclusions") %>%
+  select(matches("index"))
+```
+
+As mentioned above, there are only a small(ish) number of separate exclusions listed: `r kable(lookup_table_separated_schnitzer_2011_exclusions)`
+
+We also now have a lookup table linking the code entries for target codes in the exclusions table, and the exclusions: `r lookup_table_index_schnitzer_2011`
+
+### Parsing exclusion codes
+
+Some exclusions are also listed as ranges of codes, so we'll now separate them next.
+
+The first step is to tag the line with superscript ^b^ so we can deal with it later, then the superscript ^b^ can be removed from the exclusion codes.
+Next we'll separate comma separated codes.
+Next we'll expand codes expressed as ranges and convert them into comma-seaparated codes,
+Then we'll separate the newly generated comma-separated values.
+
+```{r}
+lookup_table_separated_schnitzer_2011_exclusions_separated <-
+  lookup_table_separated_schnitzer_2011_exclusions %>%
+  mutate(
+    superscript_b = str_detect(exclusions, pattern="b$"),  # tag superscript b so we can deal with it later
+    exclusions = sub(exclusions, pattern="b$", replacement = "")  # remove final now that we have a tag
+  ) %>%
+  separate_rows(exclusions, sep = ", ") %>%  # separate comma-separated values
+  mutate(exclusions = sapply(exclusions, FUN=function(x) generate_codes_from_range(x) %>% paste(collapse = ","), USE.NAMES = FALSE)) %>%  # collapse range codes into comma searated values
+  separate_rows(exclusions, sep = ",")
+```
+
+
+
+```{r}
+schnitzer_2011_exclusions_empirical.semicolonEntries <-
+  schnitzer_2011_exclusions_empirical_raw_remaining %>%
+  filter(str_detect(exclusions, pattern=";"))
+
+schnitzer_2011_exclusions_empirical.noSemicolonEntries <-
+  schnitzer_2011_exclusions_empirical_raw_remaining %>%
+  filter(!str_detect(exclusions, pattern=";"))
+
+schnitzer_2011_exclusions_empirical.semicolonEntries_processed <-
+  schnitzer_2011_exclusions_empirical.semicolonEntries %>%
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      codes <- x$exclusions %>% 
+        str_split(., pattern="; or |; ") %>% 
+        unlist
+      newRows <- cbind(
+        x,
+        exclude_if_any = codes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows()
+
+schnitzer_2011_exclusions_empirical_semicolons_processed <-
+  bind_rows(
+    schnitzer_2011_exclusions_empirical.noSemicolonEntries %>% mutate(exclude_if_any = exclusions),
+    schnitzer_2011_exclusions_empirical.semicolonEntries_processed
+  )
+```
+
+We've separated semicolon-separated entries, now we are left with:
+
+* single codes
+* code ranges with superscript *b*
+* simple code ranges
+
+We'll next deal with these separately:
+
+```{r}
+schnitzer_2011_exclusions_empirical_semicolons_processed.singleCodes <-
+  schnitzer_2011_exclusions_empirical_semicolons_processed %>%
+  filter(!str_detect(exclude_if_any, pattern=";|,|-|–"))  # mid-length dash is used in the original table
+
+schnitzer_2011_exclusions_empirical_semicolons_processed.rangeCodesWithSuperscript <-
+  schnitzer_2011_exclusions_empirical_semicolons_processed %>%
+  filter(str_detect(exclude_if_any, pattern="b$")) %>%  # final b
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      codes <- x$exclude_if_any %>% 
+        str_split(., pattern=", ") %>% 
+        unlist %>%
+        sub(., pattern = "b$", replacement="")  # replace final b
+      code1 <- str_split(codes,pattern = "–|-", simplify = TRUE)[1]
+      code2 <- str_split(codes,pattern = "–|-", simplify = TRUE)[2]
+      parsedCodes <- icd::expand_range(code1,code2, defined=FALSE, short_code=FALSE)  # Schnitzer et al. 2011 used ICD-9-CM so we can use the icd package. Great!
+      newRows <- cbind(
+        x %>% rename(code_range=exclude_if_any),
+        exclude_if_any = parsedCodes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows() %>%
+  filter(!str_detect(exclude_if_any, pattern="\\.6|\\.7"))  # remove cases with code .6 or .7, they are not to be excluded
+  
+schnitzer_2011_exclusions_empirical_semicolons_processed.rangeCodes <-
+  schnitzer_2011_exclusions_empirical_semicolons_processed %>%
+  filter(str_detect(exclude_if_any, pattern="-|–.*[^b]$")) %>%  # ranges denoted with hyphen but not final b
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      codes <- x$exclude_if_any %>% 
+        str_split(., pattern=", ") %>% 
+        unlist %>%
+        sub(., pattern = "b$", replacement="")  # replace final b
+      code1 <- str_split(codes,pattern = "–|-", simplify = TRUE)[1]
+      code2 <- str_split(codes,pattern = "–|-", simplify = TRUE)[2]
+      parsedCodes <- icd::expand_range(code1,code2, defined=FALSE, short_code=FALSE)  # Schnitzer et al. 2011 used ICD-9-CM so we can use the icd package. Great!
+      newRows <- cbind(
+        x %>% rename(code_range=exclude_if_any),
+        exclude_if_any = parsedCodes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows()
+```
+
+Now that we've listed the individual codes instead of ranges, the last thing to do is to also separate the target codes to which the exclusions apply; these codes were also listed as either single codes, single codes separated by commas, or ranges of codes.
+
+```{r}
+schnitzer_2011_exclusions_empirical_processed_exclusions <-
+  bind_rows(
+    schnitzer_2011_exclusions_empirical_semicolons_processed.singleCodes,
+    schnitzer_2011_exclusions_empirical_semicolons_processed.rangeCodes,
+    schnitzer_2011_exclusions_empirical_semicolons_processed.rangeCodesWithSuperscript
+  )
+
+schnitzer_2011_exclusions_empirical_processed_exclusions.singleCodes <-
+ schnitzer_2011_exclusions_empirical_processed_exclusions %>%
+  filter(!str_detect(Code, pattern=",|–|-"))
+
+schnitzer_2011_exclusions_empirical_processed_exclusions.codeRange <-
+ schnitzer_2011_exclusions_empirical_processed_exclusions %>%
+  filter(str_detect(Code, pattern="–|-")) %>%
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      codes <- x$Code %>% 
+        str_split(., pattern="–|-") %>%
+        unlist %>%
+        (function(x) seq(from=min(x), to=max(x), by=1)) %>%
+        as.character()
+      newRows <- cbind(
+        x,
+        qualifying_code = codes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows()
+
+schnitzer_2011_exclusions_empirical_processed_exclusions.multipleCodes <-
+ schnitzer_2011_exclusions_empirical_processed_exclusions %>%
+  filter(str_detect(Code, pattern=",")) %>%
+  split(seq_len(nrow(.))) %>%
+  map(function(x) {
+      codes <- x$Code %>% 
+        str_split(., pattern=", ") %>%
+        unlist
+      newRows <- cbind(
+        x,
+        qualifying_code = codes,
+        stringsAsFactors = FALSE
+      ) %>% as_tibble()
+    }) %>%
+  bind_rows()
+
+schnitzer_2011_exclusions_empirical_processed <-
+  bind_rows(
+    schnitzer_2011_exclusions_empirical_processed_exclusions.singleCodes %>% rename(qualifying_code=Code),
+    schnitzer_2011_exclusions_empirical_processed_exclusions.codeRange,
+    schnitzer_2011_exclusions_empirical_processed_exclusions.multipleCodes
+  ) %>%
+  select(qualifying_code, exclude_if_any)
+
+## Write the file
+write.csv(schnitzer_2011_exclusions_empirical_processed, file = "./processed_ICD_codes/Schnitzer_et_al_2011_exclusions_empirical_except_maltreatment_icd9cm.csv", row.names = FALSE)
+```
+
+Finally, we can merge this list of exclusions with the previously generated list of exclusions for maltreatment
+
+```{r}
+malnutritionCode <- "262"
+icd::explain_code(malnutritionCode)
+
+schnitzer_2011_exclusions_empirical_complete <-
+  bind_rows(
+    schnitzer_2011_exclusions_empirical_processed,
+    schnitzer_2011_malnutrition_exclusions_processed %>% mutate(qualifying_code=malnutritionCode) %>% select(qualifying_code, exclude_if_any)
+  ) %>%
+  arrange(qualifying_code,exclude_if_any)
+
+## Write the file
+write.csv(schnitzer_2011_exclusions_empirical_complete, file = "./processed_ICD_codes/Schnitzer_et_al_2011_exclusions_empirical_incl_maltreatment_icd9cm.csv", row.names = FALSE)
+```
+
+# Comparing inclusion tables between AGI et al. 2010 & Schnitzer et al. 2011
+
+## Theoretical differences
+
+Both groups' approach was to review existing litearture and consult stakeholders to define ICD codes for maltreatment.
+
+The AGI et al. work defined a *hierarchy* of ICD codes on a spectrum ranging from definitive maltreatment (ICD-10 codes T74, Y06 and Y07) to decreasingly likely maltreatment.
+
+> We used the alert features listed in the NICE guidance and expert opinion elicited during stakeholder meetings for the project to select codes that would be expected to trigger consideration or suspicion of child maltreatment. Causes of injury were classifi ed according to a hierarchy of codes reflecting a diminishing likelihood of maltreatment (table 1 and online table 1). None provide definitive evidence of maltreatment. We separately analysed codes for maltreatment syndromes(ICD-10 T74, Y06 and Y07) and grouped those related to maltreatment as assault, undetermined cause and adverse social circumstances (online table 1).
+
+The Schnitzer work defined definite cases of maltreatment in the 2004 paper, and a separate list of non-definitive but suggestive codes of maltreatment with complex inclusion/exclusion criteria in the 2011 paper.
+
+> A comprehensive list of ICD codes that represent illnesses and injuries suspicious for child maltreatment (physical abuse, sexual abuse, neglect), was compiled following an extensive literature review and consultation with an advisory panel of child abuse and neglect experts convened for this project. This list of ICD codes also included specific inclusion and exclusion criteria (e.g., age limits, co-occurring ICD codes) for individual codes (The full list of codes is included in Appendix Table A1). These inclusion and exclusion criteria were often crucial for increasing the likelihood that the illness or injury with the code was related to maltreatment and not some other cause. For example, ICD codes assigned for an internal injury or fracture were excluded if there was an E code indicating that a motor vehicle crash was the mechanism of injury and the child was a motor vehicle passenger when injured.
+
+## Practical differences
+
+Now that the codes from all three papers discussed above have been extracted, we can compare if the final lists of codes obtained from the papers differ.
+
+## How to determine if a code is included in a set?
+
+Codes have been variously listed by authors either as chapter headings e.g. *T74 maltreatment syndrome*, or specific ranges or individual codes (i.e. *V15.49 History of abuse - other*). This means we need to have a robust rule for determining whether a code is included or not.
+
+The best way to do this is to determine if a code in the list of inclusions is a **prefix** of a given code. In other words, if we specified *T74* as an inclusion, then code *T74* followed by any number of digits/letters should be included.
+
+The way to implement this in code is through regular expression matching using the start of line character *\^*, or with in-built functions such as *base::startsWith()*, or *stringr::str\_starts()*.
+Note that *stringr::str\_starts()* is only a wrapper for *stringr::str\_detect()*, and in our case we want to pase a concatenation of codes
+
+Note that another potential approach would be to simply match substrings, however, this results in erroneous matches such as ICD-9 code *967* matching ICD-9 code *E967*. This is a computationally faster approach, of course.
+
+## What's the best function to use computationally?
+
+```{r}
+targetCodes <- 
+  c(icd:::generate_random_decimal_icd9(n=1e4), icd:::generate_random_short_icd10cm_bill(n=1e4,short_code=FALSE))
+inclusionCodes <- unique(
+  c(agi_2010_processed_long$code, schnitzer_2004_processed$icd9code, schnitzer_2011_inclusions_empirical_processed$icd9code)
+)
+microbenchmark::microbenchmark(times = 100,
+  sapply(targetCodes, function(target) any(sapply(inclusionCodes, function(incl) base::startsWith(target, prefix=incl))), USE.NAMES = FALSE),
+  stringr::str_detect(targetCodes, pattern=paste(add_caret(escape_dot(inclusionCodes)),collapse="|"))  
+)
+```
+
+
+## Are all definite maltreatment codes from Schnitzer et al 2004 included in AGI 2010?
+
+```{r}
+## helper function to escape dot for regular expression matching
+escape_dot <- function(strng) {
+  return(sub(strng, pattern="\\.", replacement="\\\\."))
+}
+## helper function to add caret to start of string, in regex terms matching start of line
+add_caret <- function(strng) {
+  return(paste0("^",strng))
+}
+## helper function for prefix matching inclusions to target
+codes_captured_by <- function(target, inclusions) {
+  return(
+    str_detect(
+      string = target, 
+      pattern = paste(add_caret(escape_dot(inclusions)),collapse="|")
+    )
+  )
+}
+
+schnitzer_2004_not_included_in_agi_2010 <-
+  schnitzer_2004_processed %>%
+  mutate(
+    included_in_agi = str_detect(string = icd9code, pattern = paste(add_caret(escape_dot(agi_2010_processed_long$code)),collapse="|"))
+         ) %>%
+  filter(!included_in_agi)
+```
+
+There were `r nrow(schnitzer_2004_not_included_in_agi_2010)` not included/captured by AGI 2010 codes: `r kable(schnitzer_2004_not_included_in_agi_2010 %>% select(-maltreatmentTypeSchnitzer2004))`
+
+It would appear these were "lost"" in translation from ICD-10 codes to ICD-9 done by the AGI group - because their aim wasn't a comprehensive search for ICD-9 codes, but rather a search for ICD-9 equivalents to the ICD-10 codes.
+
+## What codes in AGI et al. 2010 and Schnitzer et al. 2010 overlap?
+
+### What Schnitzer et al. 2011 codes are covered by AGI 2010?
+
+```{r}
+schnitzer_2011_included_in_agi_2010 <-
+  schnitzer_2011_inclusions_empirical_processed %>%
+  mutate(
+    included_in_agi = sapply(icd9code, FUN=function(x) grepl(x, pattern = paste(escape_dot(agi_2010_processed_long$code),collapse="|"))),
+    included_in_agi2 = sapply(icd9code, function(x) codes_captured_by(x,inclusions = agi_2010_processed_long$code))
+         ) %>%
+  filter(included_in_agi | included_in_agi2)
+
+schnitzer_2011_not_included_in_agi_2010 <- 
+  schnitzer_2011_inclusions_empirical_processed %>%
+  mutate(included_in_agi = sapply(icd9code, FUN=function(x) grepl(x, pattern = paste(escape_dot(agi_2010_processed_long$code),collapse="|")))) %>%
+  filter(!included_in_agi) #%>%
+  # mutate(
+  #   closest_agi_match = sapply(icd9code, FUN=function(x) agrep(x=agi_2010_processed_long$code, pattern=escape_dot(x), value = TRUE) %>% paste(collapse=" | ")) 
+  # )
+```
+
+### What AGI 2010 codes are covered by Schnitzer et al. 2011 codes ?
+
+```{r}
+agi_2010_included_in_schnitzer_2011 <-
+  agi_2010_processed_long %>%
+  mutate(included_in_schnitzer = sapply(code, FUN=function(x) grepl(x, pattern = paste(escape_dot(schnitzer_2011_inclusions_empirical_processed$icd9code),collapse="|")))) %>%
+  filter(included_in_schnitzer)
+
+agi_2010_not_included_in_schnitzer_2011 <- 
+  agi_2010_processed_long %>%
+  mutate(included_in_schnitzer = sapply(code, FUN=function(x) grepl(x, pattern = paste(escape_dot(schnitzer_2011_inclusions_empirical_processed$icd9code),collapse="|")))) %>%
+  filter(icd_version!="ICD-10" & !included_in_schnitzer)
+```
+
+# Compiling the final inclusion & exclusions list
+
+Given that Schnitzer 2004, Schnitzer 2011, and AGI 2010 all contribute unique codes to the union of all codes, this warrants the inclusion of all three sets of codes in the final list. For each code, we also specify the source list of codes.
+
+The total number of unique inclusion codes is `r length(inclusionCodes)`, and the total number of exclusion codes is `r nrow(schnitzer_2011_exclusions_empirical_complete)`
+
+```{r}
+# TODO: merge all three together
+# TODO; write up a comparison of the three
+
+# chase_inclusion_criteria <-
+#   agi_2010_processed_long
+# 
+# schnitzer_2011_inclusions_empirical_processed
+# 
+# schnitzer_2004_processed
+
+before_merging_agi_2010 <-
+  agi_2010_processed_long %>%
+  mutate(
+    in_agi = TRUE,
+    in_schnitzer_2004 = sapply(code, FUN=function(x) codes_captured_by(target = x, inclusions = schnitzer_2004_processed$icd9code)),
+    in_schnitzer_2011 = sapply(code, FUN=function(x) codes_captured_by(target = x, inclusions = schnitzer_2011_inclusions_empirical_processed$icd9code))
+  ) %>%
+  rename(type=maltreatmentTypeAGI2010)
+
+before_merging_schnitzer_2004 <-
+  schnitzer_2004_processed %>%
+  mutate(
+    in_agi = sapply(icd9code, FUN=function(x) codes_captured_by(target = x, inclusions = agi_2010_processed_long$code)),
+    in_schnitzer_2004 = TRUE,
+    in_schnitzer_2011 = sapply(icd9code, FUN=function(x) codes_captured_by(target = x, inclusions = schnitzer_2011_inclusions_empirical_processed$icd9code)),
+    icd_version = "ICD-9-CM"
+  ) %>%
+  rename(
+    code=icd9code,
+    type=maltreatmentTypeSchnitzer2004
+    )
+
+before_merging_schnitzer_2011 <-
+  schnitzer_2011_inclusions_empirical_processed %>%
+  mutate(
+    in_agi = sapply(icd9code, FUN=function(x) codes_captured_by(target = x, inclusions = agi_2010_processed_long$code)),
+    in_schnitzer_2004 = sapply(icd9code, FUN=function(x) codes_captured_by(target = x, inclusions = schnitzer_2004_processed$icd9code)),
+    in_schnitzer_2011 = TRUE,
+    icd_version = "ICD-9-CM"
+  ) %>%
+  rename(
+    code=icd9code,
+    type=maltreatmentTypeSchnitzer2011
+    )
+
+# bind_rows(
+#   before_merging_agi_2010,
+#   before_merging_schnitzer_2004,
+#   before_merging_schnitzer_2011
+# ) %>% 
+#   group_by(code) %>%
+#   filter(n()>1) %>%
+#   arrange(code)
+  
+merged_codes <- 
+  bind_rows(
+    before_merging_agi_2010,
+    before_merging_schnitzer_2004,
+    before_merging_schnitzer_2011
+  ) %>%
+  filter(!duplicated(code))  # remove duplicate entries for codes, only keeping first instance
+
+merged_codes_for_printing <-
+  merged_codes %>%
+  mutate(
+    Source = paste(ifelse(in_agi,"AGI et al. 2010",""),ifelse(in_schnitzer_2004,"Schnitzer et al. 2004",""),ifelse(in_schnitzer_2011,"Schnitzer et al. 2011",""),sep = ", "),
+    Source = gsub(Source, pattern="(\\, )+$|^(\\, )+", replacement = ""),
+    Source = gsub(Source, pattern="\\, \\, ", replacement = ", "),
+    description = case_when(
+      !is.na(icd9description) ~ icd9description,
+      !is.na(icd10description) ~ icd10description,
+      TRUE ~ as.character(NA)
+    )
+  ) %>%
+  arrange(icd_version, code) %>%
+  select(type, description, code, icd_version, Source)
+
+## save codes for printing to excel file
+openxlsx::write.xlsx(merged_codes_for_printing, file = "./processed_ICD_codes/merged_AGI_and_Schnitzer_codes_before_crosswalk.xlsx")
+```
+
+# ICD-9-CM & ICD-10-CM General Equivalence Mapping (GEM)
+
+The General Equivalence Mapping (GEM) is a set of two reference files that show the mapping from ICD-9-CM codes to ICD-10-CM codes and vice versa, where appropriate. We can use these to generate the cross-walk needed for the ICD-9-CM codes identified by Schnitzer et al., 2004 & 2011.
+
+The ICD-10-CM codes identified this way will then need to be mapped further to WHO ICD-10 codes.
+
+## Importing GEM files
+
+The latest GEM files were downloaded from TODO: source
+
+```{r}
+gem_icd9cm <- 
+  read_fwf("./raw/2018_I9gem.txt", 
+           fwf_cols(
+             source = c(1, 5), 
+             target = c(7, 13), 
+             approximate=c(15,15), 
+             no_map=c(16,16), 
+             combination=c(17,17), 
+             scenario=c(18,18), 
+             choice_list=c(19,19) 
+             )
+           )
+
+gem_icd10cm <- 
+  read_fwf("./raw/2018_I10gem.txt", 
+           fwf_cols(
+             source = c(1, 7), 
+             target = c(9, 13), 
+             approximate=c(15,15), 
+             no_map=c(16,16), 
+             combination=c(17,17), 
+             scenario=c(18,18), 
+             choice_list=c(19,19) 
+             )
+           )
+```
+
+## Doing the cross-walk
+
+There are two directions of mapping: a forward mapping, from ICD-9 to ICD-10, and a backward mapping, from ICD-10 to ICD-9. Their semantics are slightly different, but irrelevant for our use - we are concerned with maximising sensitivity.
+
+For our purposes, we will combine candidate codes from both the forward and backward mapping, and manually review them for appropriateness.
+
+The mapping consists of: 
+
+* single entry equivalents, where there is a one-to-one mapping (or multiple one-to-one mappings) for a given code. In these cases, the source code is sufficiently mapped by a single code (or by any of a range of single codes that are sufficiently similar in their meaning).
+* combination entries, where there is a one-to-many mapping (or multiple one-to-many mappings) for a given code. In these cases, multiple target codes need to co-occur to sufficiently cover the meaning implied in the source code.
+
+For our purposes, the above distinction is too complex, and any of the codes involved in any of the mappings will be used instead. For example, consider the ICD-9 code *E904.1, Accident due to lack of food* and its potential mappings:
+
+Forward mapping: `r gem_icd9cm %>% filter(startsWith(source, prefix="E9041"))`
+The no_map flag being 1 means there is no forward mapping available.
+
+Backward mapping: `r gem_icd10cm %>% filter(startsWith(target, prefix="E9041"))`
+A backward mapping to code *T730XXA Starvation, initial encounter* was found, but note that the combination flag is 1, which means this entry is part of a combination entry. The full entry is the following:
+
+`r gem_icd10cm %>% filter(startsWith(source, prefix="T730XXA"))`
+
+As you can see there are two entries in this combination entry. What this means is that to fully map the meaning of ICD-10-CM code *T730XXA Starvation, initial encounter*, both the codes *9942 Effects of hunger* AND *E904.1, Accident due to lack of food* would need to be included.
+
+For our purposes, the (incomplete) backward mapping is sufficient: we are not concerned with obtaining a maximally equivalent mapping so a smaller degree of overlap is okay.
+
+## Discrepancy between ICD-9 and ICD-9-CM
+
+There isn't a documented comparison between the WHO and the CM versions of ICD codes, so I'm documenting discrepancies as I go along. The systems are required to agree up to the 4th digit level, which means the systems are free to assign any meaning to the 5th digit and beyond. 
+A good example is the listing of codes *995.5*:
+
+```{r}
+## ICD-9 (WHO)
+icd9_codes_UK %>% filter(str_detect(code_decimal,pattern="^995.5")) %>% select(code_decimal, meaning)
+
+## ICD-9-CM
+tibble(code=icd::children("995.5"), meaning=sapply(icd::children("995.5"), icd::explain_code, USE.NAMES = FALSE))
+```
+
+In this case the 4th digit code is specific enough to warrant inclusion of the entire range in both cases. Hopefully this will be the case throughout.
+
+Another example, *E968*:
+
+```{r}
+## ICD-9 (WHO)
+icd9_codes_UK %>% filter(str_detect(code_decimal,pattern="^E968")) %>% select(code_decimal, meaning)
+
+## ICD-9-CM
+tibble(code=icd::children("E968."), meaning=sapply(icd::children("E968"), icd::explain_code, USE.NAMES = FALSE))
+```
+
+```{r}
+# TODO: standard format for all codes with standard variable names, for maximum clarity
+# TODO: change the names like agi_2010_processed to something clearer: codes_agi, e.g.
+
+unmapped_icd9cm_codes_schnitzer_2004 <-
+  schnitzer_2004_not_included_in_agi_2010$icd9code
+
+unmapped_icd9cm_codes_schnitzer_2011 <-
+  schnitzer_2011_not_included_in_agi_2010$icd9code
+
+unmapped_icd9cm_codes_schnitzer_2004_nodecimal <- 
+  unmapped_icd9cm_codes_schnitzer_2004 %>%
+  gsub(., pattern="\\.", replacement = "")  # remove decimal
+
+unmapped_icd9cm_codes_schnitzer_2011_nodecimal <- 
+  unmapped_icd9cm_codes_schnitzer_2011 %>%
+  gsub(., pattern="\\.", replacement = "")  # remove decimal
+
+map_cm_9to10_backward_schnitzer_2004 <-
+  lapply(
+    unmapped_icd9cm_codes_schnitzer_2004_nodecimal,
+    FUN = function(x) {
+      gem_icd10cm %>%
+        filter(str_starts(target, pattern=x)) %>%
+        mutate(
+          schnitzer_code = x,
+          icd10cm_code = source,
+          schnitzer_descr = icd::explain_code(x),
+          source_descr = sapply(source,function(x) icd::explain_code(x)),
+          target_descr = sapply(target,function(x) icd::explain_code(x)),
+          direction="backward"
+        )
+    } 
+  ) %>%
+  bind_rows
+
+map_cm_9to10_forward_schnitzer_2004 <-
+    lapply(
+    unmapped_icd9cm_codes_schnitzer_2004_nodecimal,
+    FUN = function(x) {
+      gem_icd9cm %>%
+        filter(str_starts(source, pattern=x)) %>%
+        mutate(
+          schnitzer_code = x,
+          icd10cm_code = target,
+          schnitzer_descr = icd::explain_code(x),
+          source_descr = sapply(source,function(x) icd::explain_code(x)),
+          target_descr = sapply(target,function(x) icd::explain_code(x)),
+          direction="forward"
+        )
+    } 
+  ) %>%
+  bind_rows
+
+map_total_schnitzer_2004 <-
+  bind_rows(
+    map_cm_9to10_forward_schnitzer_2004,
+    map_cm_9to10_backward_schnitzer_2004
+  ) %>%
+  filter(no_map!=1) %>%  # remove rows where no mapping was found
+  filter(!duplicated(icd10cm_code)) %>%  # remove duplicate rows, keeping first mention of each unique ICD-10-CM code found
+  arrange(schnitzer_code)
+  
+map_cm_9to10_backward_schnitzer_2011 <-
+  lapply(
+    unmapped_icd9cm_codes_schnitzer_2011_nodecimal,
+    FUN = function(x) {
+      gem_icd10cm %>%
+        filter(str_starts(target, pattern=x)) %>%
+        mutate(
+          schnitzer_code = x,
+          schnitzer_descr = icd::explain_code(x),
+          source_descr = sapply(source,function(x) icd::explain_code(x)),
+          target_descr = sapply(target,function(x) icd::explain_code(x)),
+          direction="backward"
+        )
+    } 
+  ) %>%
+  bind_rows
+
+map_cm_9to10_forward_schnitzer_2011 <-
+    lapply(
+    unmapped_icd9cm_codes_schnitzer_2011_nodecimal,
+    FUN = function(x) {
+      gem_icd9cm %>%
+        filter(str_starts(source, pattern=x)) %>%
+        mutate(
+          schnitzer_code = x,
+          icd10cm_code = target,
+          schnitzer_descr = icd::explain_code(x),
+          source_descr = sapply(source,function(x) icd::explain_code(x)),
+          target_descr = sapply(target,function(x) icd::explain_code(x)),
+          direction="forward"
+        )
+    } 
+  ) %>%
+  bind_rows
+
+```
+
+The Schnitzer 2004 (definite) maltreatment codes in ICD-9-CM mapped to the following ICD-10-CM codes:
+
+`r map_total_schnitzer_2004 %>% select(source,target,direction,schnitzer_code,icd10cm_code) %>% kable`
+
+# Mapping from ICD-10-CM to (WHO) ICD-10
+
+## Schnitzer 2004
+
+
+Now that the cross-walk between ICD-9-CM to ICD-10-CM is complete, we can match the ICD-10-CM codes to WHO ICD-10.
+
+The general rule is that ICD-10-CM is more specific than ICD-10, and goes into more detail; codes are required to agree in the first 4 digits, but they can diverge beyond that. Furthermore, not all 4-digit combinations are present in both ICD-10-CM and ICD-10, which means we may not find all equivalents.
+
+The search strategy is to find all matching prefixes for the ICD-10-CM codes in ICD-10, and filter down to the most specific matching prefix that is a selectable code.
+
+```{r}
+map_who_schnitzer_2004 <-
+  lapply(
+    map_total_schnitzer_2004$icd10cm_code,
+    FUN = function(x) {
+      cbind("icd10cm_code" = x,
+        icd10_codes_UK %>% filter(str_starts(x, pattern=code) & selectable=="Y")
+            ) %>%
+        rename(icd10_code=code) %>%
+        mutate(
+          icd10cm_description = icd::explain_code(x)
+        ) %>%
+        as_tibble
+    }
+  ) %>%
+    bind_rows
+
+map_who_schnitzer_2004_with_icd9cm_codes <-
+  map_who_schnitzer_2004 %>%
+  left_join(map_total_schnitzer_2004 %>% select(schnitzer_code,icd10cm_code), by="icd10cm_code") %>%
+  select(schnitzer_code, everything())
+```
+
+Because there are two translation steps involved, some of these codes may have already been captured in the AGI 2010 list of codes.
+
+```{r}
+lapply(
+    map_who_schnitzer_2004$icd10_code %>% unique,
+    FUN = function(x) {
+      x = as.character(short_to_decimal(x))
+      tibble(
+        icd10_code = x
+      ) %>%
+        left_join(
+          agi_2010_processed_long %>% 
+            filter(str_starts(x, pattern=code)) %>%
+            mutate(icd10_code=x),
+          by = "icd10_code"
+        )
+    }
+  ) %>%
+    bind_rows
+
+tibble(icd10_code = as.character(short_to_decimal("T750"))) %>% 
+  left_join(
+    agi_2010_processed_long %>% filter(str_starts("T750", pattern=code)) %>% mutate(icd10_code="T750"), by="icd10_code"
+  )
+
+map_complete_schnitzer_2004 <-
+  map_who_schnitzer_2004
+```

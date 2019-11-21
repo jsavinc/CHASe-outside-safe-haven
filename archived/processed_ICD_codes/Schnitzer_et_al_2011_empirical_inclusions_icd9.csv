@@ -1,0 +1,67 @@
+"code","description_icd9","inclusion_index","maltreatment_type_schnitzer2011","code_decimal","age_less_than"
+"0541","0541 Genital herpes",1,"ICD-9 codes suggestive of sexual maltreatment","054.1",10
+"098","098 Gonococcal infections",2,"ICD-9 codes suggestive of sexual maltreatment","098",10
+"6149","6149 Unspecified inflammatory disease of female pelvic organs and tissues",3,"ICD-9 codes suggestive of sexual maltreatment","614.9",10
+"9224","9224 Contusion of genital organs",4,"ICD-9 codes suggestive of sexual maltreatment","922.4",10
+"V715","V715 Observation following alleged rape or seduction",5,"ICD-9 codes suggestive of sexual maltreatment","V71.5",10
+"8070","8070 Fracture of rib(s), closed",8,"ICD-9 codes suggestive of physical maltreatment","807.0",5
+"8071","8071 Fracture of rib(s), open",8,"ICD-9 codes suggestive of physical maltreatment","807.1",5
+"811","811 Fracture of scapula",9,"ICD-9 codes suggestive of physical maltreatment","811",5
+"852","852 Subarachnoid, subdural and extradural haemorrhage, following injury",10,"ICD-9 codes suggestive of physical maltreatment","852",5
+"8530","8530 Other/unspec. intracranial haem.foll.without open intracranial wound",11,"ICD-9 codes suggestive of physical maltreatment","853.0",5
+"8631","8631 Injury to stomach, with open wound into cavity",12,"ICD-9 codes suggestive of physical maltreatment","863.1",10
+"E965","E965 Assault by firearms and explosives",13,"ICD-9 codes suggestive of physical maltreatment","E965",4
+"E966","E966 Assault by cutting and piercing instrument",13,"ICD-9 codes suggestive of physical maltreatment","E966",4
+"E9682","E9682 Assault by striking by blunt or thrown object",13,"ICD-9 codes suggestive of physical maltreatment","E968.2",4
+"E9689","E9689 Assault by unspecified means",14,"ICD-9 codes suggestive of physical maltreatment","E968.9",4
+"E988","E988 Injury by other/unspec. means undet. acc./purposely inflicted",15,"ICD-9 codes suggestive of physical maltreatment","E988",10
+"800","800 Fracture of vault of skull",16,"ICD-9 codes suggestive of neglect or physical maltreatment","800",5
+"805","805 Fracture of vertebral column without mention of spinal cord lesion",17,"ICD-9 codes suggestive of neglect or physical maltreatment","805",5
+"852","852 Subarachnoid, subdural and extradural haemorrhage, following injury",18,"ICD-9 codes suggestive of neglect or physical maltreatment","852",5
+"862","862 Injury to other and unspecified intrathoracic organs",19,"ICD-9 codes suggestive of neglect or physical maltreatment","862",5
+"8632","8632 Injury to small intestine, without mention of open wound into cavity",20,"ICD-9 codes suggestive of neglect or physical maltreatment","863.2",5
+"8633","8633 Injury to small intestine, with open wound into cavity",20,"ICD-9 codes suggestive of neglect or physical maltreatment","863.3",5
+"865","865 Injury to spleen",21,"ICD-9 codes suggestive of neglect or physical maltreatment","865",5
+"952","952 Spinal cord lesion without evidence of spinal bone injury",22,"ICD-9 codes suggestive of neglect or physical maltreatment","952",3
+"262","262 Other severe protein-calorie malnutrition",23,"ICD-9 codes suggestive of neglect","262",10
+"5210","5210 Dental caries",24,"ICD-9 codes suggestive of neglect","521.0",10
+"6927","6927 Contact dermatitis and other eczema due to due to solar radiation",25,"ICD-9 codes suggestive of neglect","692.7",2
+"808","808 Fracture of pelvis",26,"ICD-9 codes suggestive of neglect","808",5
+"860","860 Traumatic pneumothorax and haemothorax",27,"ICD-9 codes suggestive of neglect","860",5
+"861","861 Injury to heart and lung",28,"ICD-9 codes suggestive of neglect","861",5
+"8638","8638 Injury to other/unspec. g.i. sites, without open wound into cavity",29,"ICD-9 codes suggestive of neglect","863.8",5
+"864","864 Injury to liver",30,"ICD-9 codes suggestive of neglect","864",5
+"866","866 Injury to kidney",31,"ICD-9 codes suggestive of neglect","866",5
+"941","941 Burn of face, head and neck",32,"ICD-9 codes suggestive of neglect","941",5
+"942","942 Burn of trunk",33,"ICD-9 codes suggestive of neglect","942",5
+"945","945 Burn of lower limb(s)",34,"ICD-9 codes suggestive of neglect","945",5
+"946","946 Burns of multiple specified sites",35,"ICD-9 codes suggestive of neglect","946",5
+"960","960 Poisoning by antibiotics",36,"ICD-9 codes suggestive of neglect","960",5
+"961","961 Poisoning by other anti-infectives",36,"ICD-9 codes suggestive of neglect","961",5
+"962","962 Poisoning by hormones and synthetic substitutes",36,"ICD-9 codes suggestive of neglect","962",5
+"963","963 Poisoning by primarily systemic agents",36,"ICD-9 codes suggestive of neglect","963",5
+"964","964 Poisoning by agents primarily affecting blood constituents",36,"ICD-9 codes suggestive of neglect","964",5
+"965","965 Poisoning by analgesics, antipyretics and antirheumatics",36,"ICD-9 codes suggestive of neglect","965",5
+"966","966 Poisoning by anticonvulsants and anti-parkinsonism drugs",36,"ICD-9 codes suggestive of neglect","966",5
+"967","967 Poisoning by sedatives and hypnotics",36,"ICD-9 codes suggestive of neglect","967",5
+"968","968 Poisoning by other central nervous system depressants",36,"ICD-9 codes suggestive of neglect","968",5
+"969","969 Poisoning by psychotropic agents",36,"ICD-9 codes suggestive of neglect","969",5
+"970","970 Poisoning by central nervous system stimulants",36,"ICD-9 codes suggestive of neglect","970",5
+"971","971 Poisoning by drugs primarily affecting the autonomic nervous system",36,"ICD-9 codes suggestive of neglect","971",5
+"972","972 Poisoning by agents primarily affecting the cardiovascular system",36,"ICD-9 codes suggestive of neglect","972",5
+"973","973 Poisoning by agents primarily affecting the gastrointestinal system",36,"ICD-9 codes suggestive of neglect","973",5
+"974","974 Poisoning by water, mineral and uric acid metabolism drugs",36,"ICD-9 codes suggestive of neglect","974",5
+"975","975 Poisoning by agents prim. act. on smooth/skeletal muscles, respir. system",36,"ICD-9 codes suggestive of neglect","975",5
+"976","976 Poisoning by agents prim.aff.skin, mucous memb.; ophth,otorhin,dental drug",36,"ICD-9 codes suggestive of neglect","976",5
+"977","977 Poisoning by other and unspecified drugs and medicaments",36,"ICD-9 codes suggestive of neglect","977",5
+"978","978 Poisoning by bacterial vaccines",36,"ICD-9 codes suggestive of neglect","978",5
+"979","979 Poisoning by other vaccines and biological substances",36,"ICD-9 codes suggestive of neglect","979",5
+"9941","9941 Drowning and nonfatal submersion",37,"ICD-9 codes suggestive of neglect","994.1",4
+"E9102","E9102 Acc. drowning/submersion sport without diving equ'pt",39,"ICD-9 codes suggestive of neglect","E910.2",4
+"E9104","E9104 Acc. drowning/submersion in bathtub",40,"ICD-9 codes suggestive of neglect","E910.4",4
+"E9108","E9108 Other spec. acc. drowning/submersion",41,"ICD-9 codes suggestive of neglect","E910.8",4
+"E9109","E9109 Unspec. acc. drowning and submersion",42,"ICD-9 codes suggestive of neglect","E910.9",4
+"E9600","E9600 Unarmed fight or brawl",43,"ICD-9 codes suggestive of neglect","E960.0",4
+"E980","E980 Injury undet. whether acc. or purposely inflicted (e980-e989)",44,"ICD-9 codes suggestive of neglect","E980",5
+"E985","E985 Injury by firearms, explosives, undet. acc./purposely inflicted",45,"ICD-9 codes suggestive of neglect","E985",10
+"V60","V60 Housing, household and economic circumstances",46,"ICD-9 codes suggestive of neglect","V60",10
