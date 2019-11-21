@@ -281,7 +281,8 @@ mvr_codes_condensed <-
     category = gsub(category, pattern="^\\d\\.\\s+", replacement=""),
     category = gsub(category, pattern="\\-syndrome", replacement=""),
     icd_9 = gsub(icd_9, pattern="^.*codes\\s+", replacement=""),
-    icd_10 = gsub(icd_10, pattern="^.*code(s)?\\s+", replacement="")
+    icd_10 = gsub(icd_10, pattern="^.*code(s)?\\s+", replacement=""),
+    icd_10 = gsub(icd_10, pattern="42\\.8", replacement="S42.8")  #  fix missing S in one of the codes
   ) %>%
   mutate_all(~trimws(.)) %>%
   mutate_all(~gsub(x=., pattern="\\s\\s+", replacement=" ")) %>%
@@ -301,7 +302,6 @@ mvr_codes_long <-
   filter(codes!="") %>%
   mutate(codes = sapply(codes, FUN=function(x) generate_codes_from_range(x) %>% paste(collapse = ","), USE.NAMES = FALSE)) %>%
   separate_rows(codes, sep=",") %>%
-  mutate(codes=if_else(condition=codes=="42.8"&icd_version==10, true = "S42.8", false=codes)) %>%  # fix missing S in one of the codes
   rename(code_decimal=codes) %>%
   mutate(code=remove_dot(code_decimal))
 

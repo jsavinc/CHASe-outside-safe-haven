@@ -2,14 +2,15 @@
 .Rhistory
 .RData
 .Ruserdata
-archived
 extract_icd9_from_cdc_materials.rmd
 extract_tables_from_online_article.R
-icd_codes
 lit_review_merge_records
 merge_scopus_wos_records.pdf
 merge_scopus_wos_records.rmd
+mid-year-pop-est-17-all-tables-revised
+mid-year-pop-est-17-all-tables-revised.zip
 raw
 schnitzer2011
 test_matching_codes_with_inclusions_and_exclusions.R
 understanding_partial_dates.Rmd
+CHASe-outside-safe-haven.Rproj
