@@ -1,11 +1,12 @@
 ---
-title: "Adjusting AHRQ CCS for use with UK (WHO) ICD codes"
+title: "Cross-mapping AHRQ CCS for use with UK (WHO) ICD codes"
 author: "Jan Savinc"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
     toc: true
-    code_folding: show
+    toc_float: true
+    code_folding: hide
 editor_options: 
   chunk_output_type: console
 ---
@@ -22,7 +23,7 @@ The *icd* package in R actually implements the CCS already but it won't suit our
 
 *knitr* is used for compiling this document!
 
-```{r}
+```{r, warning=FALSE}
 library(tidyverse)
 library(icd)
 library(knitr)
@@ -31,14 +32,14 @@ library(fuzzyjoin)
 
 # Introduction to CCS
 
-The [https://www.hcup-us.ahrq.gov/tools_software.jsp](AHRQ's Clinical Classification Software (CCS)) comprises of a mapping of all ICD-9-CM and ICD-10-CM codes to a number of diagnostic categories, allowing the grouping of diagnoses for analyses. 
-The ICD-10-CM version is available at [https://www.hcup-us.ahrq.gov/toolssoftware/ccs10/ccs10.jsp](a separate webpage).
+The [AHRQ's Clinical Classification Software (CCS)](https://www.hcup-us.ahrq.gov/tools_software.jsp) comprises of a mapping of all ICD-9-CM and ICD-10-CM codes to a number of diagnostic categories, allowing the grouping of diagnoses for analyses. 
+The ICD-10-CM version is available at [a separate webpage](https://www.hcup-us.ahrq.gov/toolssoftware/ccsr/ccs_refined.jsp). Note: the beta version 2019.1 of ICD-10-CM CCS was used - the refined version has been published since, but was not used.
 
 The purpose of the CCS is to etablish a manageable number of categories grouping of possible diagnoses, in our case to group mental health conditions into a tractable number of conditions for analys.s
 
 ## Single-level vs multi-level CCS
 
-The descriptions below are taken from the CCS User guide [https://www.hcup-us.ahrq.gov/toolssoftware/ccs/CCSUsersGuide.pdf](available here).
+The descriptions below are taken from the CCS User guide [available here](https://www.hcup-us.ahrq.gov/toolssoftware/ccs/CCSUsersGuide.pdf).
 
 > The single-level diagnosis classification scheme aggregates illnesses and conditions into 285 mutually exclusive categories, most of which are clinically homogeneous.
 
@@ -50,7 +51,7 @@ Multi-level CCS includes a Mental Disorders category.
 
 # Importing master list of WHO ICD codes in use in UK
 
-We've compiled these lists from the UK Biobank data dictionary [https://biobank.ctsu.ox.ac.uk/crystal/coding.cgi?id=87](available online).
+We've compiled these lists from the UK Biobank data dictionary [available online](https://biobank.ctsu.ox.ac.uk/crystal/coding.cgi?id=87).
 
 ```{r}
 who_icd9 <- read_csv("./processed_ICD_codes/master_icd9_code_list_UK(WHO).csv")
@@ -61,9 +62,9 @@ who_icd10 <- read_csv("./processed_ICD_codes/master_icd10_code_list_UK(WHO).csv"
 
 The CCS categories were defined for the -CM (Clinical Modification) variant of the ICD classification, in use in the US and elsewhere, but not in the UK.
 
-The ICD-9-CM CCS version **2015** were downloaded from the [https://www.hcup-us.ahrq.gov/toolssoftware/ccs/ccs.jsp#download](AHRQ website).
+The ICD-9-CM CCS version **2015** were downloaded from the [AHRQ website](https://www.hcup-us.ahrq.gov/toolssoftware/ccs/ccs.jsp#download).
 
-The ICD-10-CM CCS version **2019.1** were downloaded from the [https://www.hcup-us.ahrq.gov/toolssoftware/ccs10/ccs10.jsp#download](AHRQ website).
+The ICD-10-CM CCS version **2019.1** were downloaded from the [AHRQ website](https://www.hcup-us.ahrq.gov/toolssoftware/ccsr/ccs_refined.jsp).
 
 ```{r}
 ccs_icd9cm <- 
@@ -294,11 +295,6 @@ unambiguous_prefix_minor_ccs_icd9cm <-
   filter(!prefix %in% c(as.character(290:319),paste0("E",c(95,98)))) %>%
   filter(n()==1) %>%
   select(-n)
-
-# ambiguous_prefix_ccs_icd9cm <-
-#   grouped_by_prefix_ccs_icd9cm %>%
-#   group_by(prefix) %>%
-#   filter(n()>1)
 
 major_codes_mapped_icd9_exact <-
   major_codes_icd9 %>%
@@ -688,7 +684,6 @@ ccs_codes_icd10 %>%
 #   )
 
 # TODO: try to do this in a way that doesn't take too long to compute!
-
 ```
 
 No, they don't!
@@ -740,8 +735,10 @@ ccs_icd9cm %>%
   filter(CCS_CATEGORY %in% 650:670) %>%  # take only subset of mental health categories
   left_join(ccs_icd9cm_archive %>% select(ICD_9_CM_CODE,CCS_CATEGORY_ARCHIVE = CCS_CATEGORY, CCS_CATEGORY_DESCRIPTION_ARCHIVE=CCS_CATEGORY_DESCRIPTION), by="ICD_9_CM_CODE") %>%
   count(CCS_CATEGORY,CCS_CATEGORY_DESCRIPTION,CCS_CATEGORY_ARCHIVE,CCS_CATEGORY_DESCRIPTION_ARCHIVE)
-
 ```
+
+We will continue to use the 650-670 range, using custom mapping.
+We will investigate codes in the actual study data that don't have exact matches in the CCS catalogue once we encounter them!
 
 # Conclusions
 
