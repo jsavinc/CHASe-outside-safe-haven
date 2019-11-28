@@ -3,15 +3,17 @@ title: "Extract UK (WHO) ICD code lists from UK Biobank files"
 author: "Jan Savinc"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
-  pdf_document:
+  html_document:
     toc: true
+    toc_float: true
+    code_folding: hide
 editor_options: 
   chunk_output_type: console
 ---
 
 # Loading libraries
 
-```{r}
+```{r, warning=FALSE}
 library(tidyverse)
 library(icd)
 ```
@@ -138,5 +140,82 @@ write.csv(
   file = "./processed_ICD_codes/master_icd10_code_list_UK(WHO).csv", 
   row.names = FALSE
   )
+```
+
+# Compiling mappings of code prefixes to ICD chapters
+
+For the use of rough categorisation of conditions, it is also useful to have a mapping of top-level ICD codes (3 characters) to their respective ICD chapter.
+
+```{r}
+generate_csv_from_range <- function(code_range, icd_version) {
+  ## code_range is in format 001-141, E123-E128, V11-V45, for example
+  prefix_letter <- str_extract(code_range, pattern="^[A-Z]") %>% replace_na("")
+  start_and_end_numbers <- str_split(code_range, pattern="\\-")
+  pmap_chr(
+    list(
+      start_and_end_numbers,
+      prefix_letter,
+      icd_version
+    ),
+    ~{
+      start=parse_number(..1[1])
+      end=parse_number(..1[2])
+      sequence = seq(start,end,by=1)
+      if (!..2 %in% c("V") & ..3=="9") {  # for ICD-9 codes, use 3 digits, or E+3 digits
+        padded_sequence = paste(str_pad(sequence,width=3,pad="0"))
+      } else {  # for ICD-10 (and ICD-9 V-codes), use letter+2 digits
+        padded_sequence = paste(str_pad(sequence,width=2,pad="0"))
+      }
+      lettered_sequence = paste0(..2, padded_sequence)
+      csv = paste(lettered_sequence, collapse=",")
+      return(csv)
+      }
+  )
+}
+
+chapter_block_code_icd9 <-
+  processed_icd9 %>%
+  filter(parent_id==0) %>%  # the main chapters
+  select(chapter=meaning, chapter_id=node_id) %>%
+  left_join(processed_icd9 %>% select(parent_id, block_id=node_id, block = meaning), by=c("chapter_id"="parent_id")) %>%
+  mutate(
+    code_range=gsub(block, pattern="^([A-Z]*\\d{2,3}\\-[A-Z]*\\d{2,3})\\s.*$", replacement = "\\1"),  # extract the e.g. E800-E859 ranges
+    icd_version=9,
+    csv = generate_csv_from_range(code_range, icd_version = 9)
+    ) %>%
+  separate_rows(csv, sep="\\,") %>%
+  select(chapter, block, csv) %>%
+  distinct
+  
+chapter_block_code_icd10 <-
+  processed_icd10 %>%
+  filter(parent_id==0) %>%  # the main chapters
+  select(chapter=meaning, chapter_id=node_id) %>%
+  left_join(processed_icd10 %>% select(parent_id, block_id=node_id, block = meaning), by=c("chapter_id"="parent_id")) %>%
+  mutate(
+    code_range=gsub(block, pattern="^([A-Z]*\\d{2,3}\\-[A-Z]*\\d{2,3})\\s.*$", replacement = "\\1")
+    ) %>%
+  mutate(
+    icd_version=10,
+    csv = generate_csv_from_range(code_range, icd_version = 10)
+    ) %>%
+  separate_rows(csv, sep="\\,") %>%
+  select(chapter, block, csv) %>%
+  distinct
+
+map_icd_chapter_block_code <-
+  bind_rows(
+    chapter_block_code_icd9,
+    chapter_block_code_icd10
+  )
+
+write_csv(map_icd_chapter_block_code, path = "./processed_ICD_codes/map_icd_chapter_block_code.csv")
+```
+
+See examples:
+
+```{r}
+head(chapter_block_code_icd9)
+head(chapter_block_code_icd10)
 ```
 
