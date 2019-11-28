@@ -1,0 +1,207 @@
+category_mvr,mvr_index,icd_version,code_decimal,code
+Maltreatment,1,9,995.5,9955
+Maltreatment,1,9,E967,E967
+Maltreatment,1,9,994.2,9942
+Maltreatment,1,9,994.3,9943
+Maltreatment,1,10,T74,T74
+Maltreatment,1,10,Y06,Y06
+Maltreatment,1,10,Y07,Y07
+Maltreatment,1,10,T73,T73
+Maltreatment,NA,10,T74,T74
+Maltreatment,NA,10,T73,T73
+Maltreatment,NA,10,Y06,Y06
+Maltreatment,NA,10,Y07,Y07
+Maltreatment,NA,9,995.5,9955
+Maltreatment,NA,9,994.2,9942
+Maltreatment,NA,9,994.3,9943
+Maltreatment,NA,9,E967,E967
+Assault,2,9,E960,E960
+Assault,2,9,E961,E961
+Assault,2,9,E962,E962
+Assault,2,9,E963,E963
+Assault,2,9,E964,E964
+Assault,2,9,E965,E965
+Assault,2,9,E966,E966
+Assault,2,9,E968,E968
+Assault,2,9,E969,E969
+Assault,2,10,X85,X85
+Assault,2,10,X86,X86
+Assault,2,10,X87,X87
+Assault,2,10,X88,X88
+Assault,2,10,X89,X89
+Assault,2,10,X90,X90
+Assault,2,10,X91,X91
+Assault,2,10,X92,X92
+Assault,2,10,X93,X93
+Assault,2,10,X94,X94
+Assault,2,10,X95,X95
+Assault,2,10,X96,X96
+Assault,2,10,X97,X97
+Assault,2,10,X98,X98
+Assault,2,10,X99,X99
+Assault,2,10,Y00,Y00
+Assault,2,10,Y01,Y01
+Assault,2,10,Y02,Y02
+Assault,2,10,Y03,Y03
+Assault,2,10,Y04,Y04
+Assault,2,10,Y05,Y05
+Assault,2,10,Y06,Y06
+Assault,2,10,Y07,Y07
+Assault,2,10,Y08,Y08
+Assault,2,10,Y09,Y09
+Assault,NA,10,Y04,Y04
+Assault,NA,10,Y05,Y05
+Assault,NA,10,X85,X85
+Assault,NA,10,X86,X86
+Assault,NA,10,X87,X87
+Assault,NA,10,X88,X88
+Assault,NA,10,X89,X89
+Assault,NA,10,X90,X90
+Assault,NA,10,X91,X91
+Assault,NA,10,X92,X92
+Assault,NA,10,X93,X93
+Assault,NA,10,X94,X94
+Assault,NA,10,X95,X95
+Assault,NA,10,X96,X96
+Assault,NA,10,X97,X97
+Assault,NA,10,X98,X98
+Assault,NA,10,X99,X99
+Assault,NA,10,Y00,Y00
+Assault,NA,10,Y01,Y01
+Assault,NA,10,Y02,Y02
+Assault,NA,10,Y03,Y03
+Assault,NA,10,Y08,Y08
+Assault,NA,10,Y09,Y09
+Assault,NA,9,E960,E960
+Assault,NA,9,E961,E961
+Assault,NA,9,E962,E962
+Assault,NA,9,E963,E963
+Assault,NA,9,E964,E964
+Assault,NA,9,E965,E965
+Assault,NA,9,E966,E966
+Assault,NA,9,E968,E968
+Assault,NA,9,E969,E969
+Undetermined cause,3,9,E980,E980
+Undetermined cause,3,9,E981,E981
+Undetermined cause,3,9,E982,E982
+Undetermined cause,3,9,E983,E983
+Undetermined cause,3,9,E984,E984
+Undetermined cause,3,9,E985,E985
+Undetermined cause,3,9,E986,E986
+Undetermined cause,3,9,E987,E987
+Undetermined cause,3,9,E988,E988
+Undetermined cause,3,9,E989,E989
+Undetermined cause,3,9,V68.2,V682
+Undetermined cause,3,9,V70.4,V704
+Undetermined cause,3,9,V71.4,V714
+Undetermined cause,3,9,V71.5,V715
+Undetermined cause,3,9,V71.6,V716
+Undetermined cause,3,9,V71.81,V7181
+Undetermined cause,3,10,Y10,Y10
+Undetermined cause,3,10,Y11,Y11
+Undetermined cause,3,10,Y12,Y12
+Undetermined cause,3,10,Y13,Y13
+Undetermined cause,3,10,Y14,Y14
+Undetermined cause,3,10,Y15,Y15
+Undetermined cause,3,10,Y16,Y16
+Undetermined cause,3,10,Y17,Y17
+Undetermined cause,3,10,Y18,Y18
+Undetermined cause,3,10,Y19,Y19
+Undetermined cause,3,10,Y20,Y20
+Undetermined cause,3,10,Y21,Y21
+Undetermined cause,3,10,Y22,Y22
+Undetermined cause,3,10,Y23,Y23
+Undetermined cause,3,10,Y24,Y24
+Undetermined cause,3,10,Y25,Y25
+Undetermined cause,3,10,Y26,Y26
+Undetermined cause,3,10,Y27,Y27
+Undetermined cause,3,10,Y28,Y28
+Undetermined cause,3,10,Y29,Y29
+Undetermined cause,3,10,Y30,Y30
+Undetermined cause,3,10,Y31,Y31
+Undetermined cause,3,10,Y32,Y32
+Undetermined cause,3,10,Y33,Y33
+Undetermined cause,3,10,Y34,Y34
+Undetermined cause,3,10,Z04.0,Z040
+Undetermined cause,3,10,Z04.5,Z045
+Undetermined cause,3,10,Z04.8,Z048
+Undetermined cause,NA,10,Y20,Y20
+Undetermined cause,NA,10,Y21,Y21
+Undetermined cause,NA,10,Y22,Y22
+Undetermined cause,NA,10,Y23,Y23
+Undetermined cause,NA,10,Y24,Y24
+Undetermined cause,NA,10,Y25,Y25
+Undetermined cause,NA,10,Y26,Y26
+Undetermined cause,NA,10,Y27,Y27
+Undetermined cause,NA,10,Y28,Y28
+Undetermined cause,NA,10,Y29,Y29
+Undetermined cause,NA,10,Y30,Y30
+Undetermined cause,NA,10,Y31,Y31
+Undetermined cause,NA,10,Y32,Y32
+Undetermined cause,NA,10,Y33,Y33
+Undetermined cause,NA,10,Y34,Y34
+Undetermined cause,NA,10,Z04.5,Z045
+Undetermined cause,NA,10,Z04.8,Z048
+Undetermined cause,NA,9,E983,E983
+Undetermined cause,NA,9,E984,E984
+Undetermined cause,NA,9,E985,E985
+Undetermined cause,NA,9,E986,E986
+Undetermined cause,NA,9,E987,E987
+Undetermined cause,NA,9,E988,E988
+Undetermined cause,NA,9,E989,E989
+Undetermined cause,NA,9,V68.2,V682
+Undetermined cause,NA,9,V70.4,V704
+Undetermined cause,NA,9,V71.4,V714
+Undetermined cause,NA,9,V71.5,V715
+Undetermined cause,NA,9,V71.6,V716
+Undetermined cause,NA,9,V71.81,V7181
+Adverse social circumstances,4,9,V15.4,V154
+Adverse social circumstances,4,9,V15.5,V155
+Adverse social circumstances,4,9,V15.9,V159
+Adverse social circumstances,4,9,V60,V60
+Adverse social circumstances,4,9,V61,V61
+Adverse social circumstances,4,10,Z60,Z60
+Adverse social circumstances,4,10,Z61,Z61
+Adverse social circumstances,4,10,Z62,Z62
+Adverse social circumstances,4,10,Z63,Z63
+Adverse social circumstances,4,10,Z72,Z72
+Adverse social circumstances,4,10,Z74,Z74
+Adverse social circumstances,4,10,Z76.1,Z761
+Adverse social circumstances,4,10,Z76.2,Z762
+Adverse social circumstances,4,10,Z81,Z81
+Adverse social circumstances,4,10,Z86.5,Z865
+Adverse social circumstances,4,10,Z91.6,Z916
+Adverse social circumstances,4,10,Z91.8,Z918
+Adverse social circumstances,NA,10,P96.1,P961
+Adverse social circumstances,NA,10,Z58.8,Z588
+Adverse social circumstances,NA,10,Z58.9,Z589
+Adverse social circumstances,NA,10,Z59.0,Z590
+Adverse social circumstances,NA,10,Z59.1,Z591
+Adverse social circumstances,NA,10,Z59.4,Z594
+Adverse social circumstances,NA,10,Z59.5,Z595
+Adverse social circumstances,NA,10,Z59.7,Z597
+Adverse social circumstances,NA,10,Z59.9,Z599
+Adverse social circumstances,NA,10,Z60,Z60
+Adverse social circumstances,NA,10,Z61,Z61
+Adverse social circumstances,NA,10,Z62,Z62
+Adverse social circumstances,NA,10,Z63,Z63
+Adverse social circumstances,NA,10,Z64.4,Z644
+Adverse social circumstances,NA,10,Z65.3,Z653
+Adverse social circumstances,NA,10,Z65.8,Z658
+Adverse social circumstances,NA,10,Z65.9,Z659
+Adverse social circumstances,NA,10,Z74,Z74
+Adverse social circumstances,NA,10,Z76.1,Z761
+Adverse social circumstances,NA,10,Z76.2,Z762
+Adverse social circumstances,NA,10,Z81,Z81
+Adverse social circumstances,NA,10,Z91.8,Z918
+Adverse social circumstances,NA,9,779.5,7795
+Adverse social circumstances,NA,9,V62.89,V6289
+Adverse social circumstances,NA,9,V62.4,V624
+Adverse social circumstances,NA,9,V62.81,V6281
+Adverse social circumstances,NA,9,V62.5,V625
+Adverse social circumstances,NA,9,V62.9,V629
+Adverse social circumstances,NA,9,V69,V69
+Adverse social circumstances,NA,9,V20.0,V200
+Adverse social circumstances,NA,9,V20.1,V201
+Adverse social circumstances,NA,9,V17.0,V170
+Adverse social circumstances,NA,9,V15.89,V1589

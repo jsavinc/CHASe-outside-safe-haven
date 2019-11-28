@@ -1,4 +1,4 @@
-grouping,category,icd_9,icd_10
+grouping,category_mvr,icd_9,icd_10
 Maltreatment-related injury,Maltreatment,"995.5, E967, 994.2 or 994.3","T74, Y06, Y07, or T73"
 Maltreatment-related injury,Assault,"E960 - E966, E968, E969",X85 - Y09
 Maltreatment-related injury,Undetermined cause,"E980 - E989, V68.2, V70.4, V71.4, V71.5, V71.6, V71.81","Y10 -Y34, Z04.0, Z04.5, Z04.8"

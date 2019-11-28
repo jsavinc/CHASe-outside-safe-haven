@@ -1,4 +1,4 @@
-grouping,category,icd_version,code_decimal,code
+grouping,category_mvr,icd_version,code_decimal,code
 Maltreatment-related injury,Maltreatment,9,995.5,9955
 Maltreatment-related injury,Maltreatment,9,E967,E967
 Maltreatment-related injury,Maltreatment,9,994.2,9942

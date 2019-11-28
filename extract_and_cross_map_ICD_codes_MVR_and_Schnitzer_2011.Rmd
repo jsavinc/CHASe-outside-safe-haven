@@ -1,5 +1,5 @@
 ---
-title: Extract & cross-map ICD codes from MVR and Schnitzer et al 2011
+title: Extract & cross-map ICD codes from MVR papers and Schnitzer et al 2011
 author: "Jan Savinc"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
@@ -261,7 +261,7 @@ There are two sources of codes: the MVR (Maltreatment & Violence-related) code l
 
 Arturo Gonzalez-Izquierdo kindly provided the list of ICD codes compiled by his team for the 2010 paper [@agi_2010], which is in the file **/raw/CODES - concern groups 2011 v6.xlsx**, specifically in the sheet *Victimization related*.
 
-However, a newer listing of codes is available in the supplementary file to the Gilbert et al. 2012 paper [@gilbert_2012], which is both more compact and also has a few more codes. The supplementary file is included here: **/raw/1-s2.0-S0140673611610878-mmc1.pdf**
+A newer listing of codes is available in the supplementary file to the Gilbert et al. 2012 paper [@gilbert_2012], which is more compact and also adds a few more codes. The supplementary file is included here: **/raw/1-s2.0-S0140673611610878-mmc1.pdf**
 
 ## Extracting MVR codes from Gilbert et al 2012 paper
 
@@ -275,20 +275,21 @@ mvr_codes_condensed <-
   mvr_codes_raw %>%
   tibble(raw=.) %>%
   filter(raw!="") %>%
-  separate(raw, into=c("category","icd_9","icd_10"), sep="\\: |\\; and ") %>%
+  separate(raw, into=c("category_mvr","icd_9","icd_10"), sep="\\: |\\; and ") %>%
   mutate(
-    grouping = if_else(condition = str_starts(category, "\\d"), true = "Maltreatment-related injury", false = "Marker conditions in infants (<1 y)"),
-    category = gsub(category, pattern="^\\d\\.\\s+", replacement=""),
-    category = gsub(category, pattern="\\-syndrome", replacement=""),
+    grouping = if_else(condition = str_starts(category_mvr, "\\d"), true = "Maltreatment-related injury", false = "Marker conditions in infants (<1 y)"),
+    category_mvr = gsub(category_mvr, pattern="^\\d\\.\\s+", replacement=""),
+    category_mvr = gsub(category_mvr, pattern="\\-syndrome", replacement=""),
     icd_9 = gsub(icd_9, pattern="^.*codes\\s+", replacement=""),
     icd_10 = gsub(icd_10, pattern="^.*code(s)?\\s+", replacement=""),
     icd_10 = gsub(icd_10, pattern="42\\.8", replacement="S42.8")  #  fix missing S in one of the codes
   ) %>%
   mutate_all(~trimws(.)) %>%
   mutate_all(~gsub(x=., pattern="\\s\\s+", replacement=" ")) %>%
-  select(grouping, category, icd_9, icd_10)
+  select(grouping, category_mvr, icd_9, icd_10) %>%
+  mutate(mvr_index=1:n())
 
-write_csv(x = mvr_codes_condensed, path="./processed_ICD_codes/MVR_codes_for_appendix.csv")
+write_csv(x = mvr_codes_condensed %>% select(-mvr_index), path="./processed_ICD_codes/MVR_codes_for_appendix.csv")
 
 mvr_codes_long <-
   mvr_codes_condensed %>%
@@ -305,7 +306,7 @@ mvr_codes_long <-
   rename(code_decimal=codes) %>%
   mutate(code=remove_dot(code_decimal))
 
-write_csv(x = mvr_codes_long, path="./processed_ICD_codes/MVR_codes_long.csv")
+write_csv(x = mvr_codes_long %>% select(-mvr_index), path="./processed_ICD_codes/MVR_codes_long.csv")
 ```
 
 ## Extracting Gonzalez-Izquierdo et al. 2010 codes
@@ -325,16 +326,16 @@ agi_2010_long_condensed <-
   rename(description_icd10=Description, icd10code =`ICD-10 Codes`, icd9code=`ICD-9 CODES`) %>%  # rename to standard names
   filter(!is.na(description_icd10)) %>%  # remove blank rows
   mutate(  # extract header to include as broad maltreatment type variable
-    maltreatment_type_agi2010 = if_else(
+    category_mvr = if_else(
       condition = is.na(icd10code),
       true = description_icd10,
       false = as.character(NA)
     )
   ) %>%
-  fill(maltreatment_type_agi2010) %>%  # LOCF on maltreatment type
+  fill(category_mvr) %>%  # LOCF on maltreatment type
   filter(!is.na(icd10code) & !is.na(icd9code)) %>%  # remove header row
   mutate(agi_index = 1:nrow(.)) %>%
-  gather(-description_icd10,-maltreatment_type_agi2010,-agi_index, key="icd_version", value="code_decimal") %>%
+  gather(-description_icd10,-category_mvr,-agi_index, key="icd_version", value="code_decimal") %>%
   mutate(
     icd_version = case_when(
       icd_version == "icd10code" ~ 10,
@@ -357,12 +358,84 @@ agi_2010_long <-
   agi_2010_long_condensed %>%
   separate_rows(code_decimal, sep = ",") %>%  # separate comma-separated values
   mutate(code_decimal = sapply(code_decimal, function(x) {generate_codes_from_range(x) %>% paste(collapse=",")}, USE.NAMES = FALSE)) %>%  # convert range-defined codes to comma-separated values
-  separate_rows(code_decimal, sep = ",") #%>%  # split comma-seprated values again
+  separate_rows(code_decimal, sep = ",") %>%  # split comma-seprated values again
+  mutate(code = remove_dot(code_decimal)) #%>%
   # filter((icd_version==9 & code %in% icd9_codes_UK$code_decimal) | (icd_version==10 & code %in% icd10_codes_UK$code_decimal))  # remove non-UK codes
 
 ## now write the file
-write.csv(agi_2010_long, file = "./processed_ICD_codes/AGI_et_al_2010_ICD_codes.csv", row.names = FALSE)
+write_csv(agi_2010_long, path = "./processed_ICD_codes/AGI_et_al_2010_ICD_codes.csv")
 ```
+
+## Comparing AGI et al 2010 to MVR codes
+
+There are some codes that aren't in one list or the other:
+
+Not in AGI et al 2010 [@agi_2010]:
+
+```{r}
+mvr_codes_long %>% filter(str_starts(grouping,"Maltreatment")) %>% anti_join(agi_2010_long, by=c("code_decimal","icd_version")) %>% select(code, icd_version) %>% left_join(bind_rows(icd9_codes_UK %>% mutate(icd_version=9),icd10_codes_UK %>% mutate(icd_version=10)), by = c("code","icd_version")) %>% knitr::kable()
+```
+
+Not in Gilbert et al 2012 [@gilbert_2012]:
+
+```{r}
+agi_2010_long %>% anti_join(mvr_codes_long %>% filter(str_starts(grouping,"Maltreatment")), by=c("code_decimal","icd_version")) %>% select(code_decimal, icd_version) %>% left_join(bind_rows(icd9_codes_UK %>% mutate(icd_version=9),icd10_codes_UK %>% mutate(icd_version=10)), by = c("code_decimal","icd_version")) %>% knitr::kable()
+```
+
+## Merging the MVR codes for a complete-most list
+
+Given that there are codes in each of the lists, we can simply merge the two lists and use those codes!
+
+```{r}
+order_of_mvr_categories <- agi_2010_long$category_mvr %>% unique
+
+mvr_codes_merged_long_raw <-
+  bind_rows(
+    mvr_codes_long %>% filter(str_starts(grouping,"Maltreatment")) %>% select(-grouping),
+    agi_2010_long %>% select(-description_icd10, -agi_index)
+  ) %>%
+  distinct
+
+codes_that_are_matched_by_shorter_codes <- map(
+  mvr_codes_merged_long_raw$code,
+  function(x) {
+    pool_to_match <- mvr_codes_merged_long_raw$code[mvr_codes_merged_long_raw$code!=x]
+    pool_to_match[str_detect(pool_to_match, pattern=paste0("^", x))]
+    }
+) %>% unlist
+
+mvr_codes_merged_long <-
+  mvr_codes_merged_long_raw %>% 
+  filter(!code %in% codes_that_are_matched_by_shorter_codes) %>%
+  arrange(factor(category_mvr, levels = order_of_mvr_categories))
+
+write_csv(mvr_codes_merged_long, path = "./processed_ICD_codes/MVR_codes_merged_long.csv")
+```
+
+## Condensed version of merged codes
+
+```{r}
+mvr_codes_merged_condensed <-
+  bind_rows(
+    mvr_codes_condensed %>% filter(str_starts(grouping,"Maltreatment")) %>% select(-grouping) %>% pivot_longer(cols=starts_with("icd"), names_to="icd_version", values_to="code_decimal") %>%
+  mutate(icd_version=parse_number(icd_version)),
+   agi_2010_long_condensed %>% select(-description_icd10)
+  ) %>%
+  mutate(code_decimal=gsub(code_decimal,pattern="(\\,\\s)*or|(\\,\\s)*and", replacement=",")) %>%
+  separate_rows(code_decimal, sep="\\,") %>%
+  mutate(
+    code_decimal=trimws(code_decimal),
+    code_decimal = gsub(code_decimal, pattern="(\\s*\\-\\s*)", replacement=" - ")
+    ) %>%
+  filter(str_detect(code_decimal,"\\-")|code_decimal %in% mvr_codes_merged_long$code_decimal) %>%  # only keep codes that are expressed as range or are actually in the final merged list
+  select(-mvr_index, -agi_index) %>%
+  distinct %>%
+  arrange(factor(category_mvr, levels = order_of_mvr_categories), icd_version, code_decimal)
+  
+# TODO! complete & save
+  
+```
+
 
 # Schnitzer et al. 2011
 
