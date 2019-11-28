@@ -440,7 +440,12 @@ write.csv(
 chapter_block_code_icd9 &lt;-
   processed_icd9 %&gt;%
   filter(parent_id==0) %&gt;%  # the main chapters
-  select(chapter=meaning, chapter_id=node_id) %&gt;%
+  mutate(chapter_num = case_when(
+    node_id == 18 ~ &quot;E-codes&quot;,
+    node_id == 19 ~ &quot;V-codes&quot;,
+    TRUE ~ as.character(node_id)
+  )) %&gt;%
+  select(chapter=meaning, chapter_id=node_id, chapter_num) %&gt;%
   left_join(processed_icd9 %&gt;% select(parent_id, block_id=node_id, block = meaning), by=c(&quot;chapter_id&quot;=&quot;parent_id&quot;)) %&gt;%
   mutate(
     code_range=gsub(block, pattern=&quot;^([A-Z]*\\d{2,3}\\-[A-Z]*\\d{2,3})\\s.*$&quot;, replacement = &quot;\\1&quot;),  # extract the e.g. E800-E859 ranges
@@ -448,13 +453,14 @@ chapter_block_code_icd9 &lt;-
     csv = generate_csv_from_range(code_range, icd_version = 9)
     ) %&gt;%
   separate_rows(csv, sep=&quot;\\,&quot;) %&gt;%
-  select(chapter, block, csv) %&gt;%
+  select(chapter, chapter_num, block, prefix=csv, icd_version) %&gt;%
   distinct
   
 chapter_block_code_icd10 &lt;-
   processed_icd10 %&gt;%
   filter(parent_id==0) %&gt;%  # the main chapters
-  select(chapter=meaning, chapter_id=node_id) %&gt;%
+  mutate(chapter_num = as.character(node_id)) %&gt;%
+  select(chapter=meaning, chapter_id=node_id, chapter_num) %&gt;%
   left_join(processed_icd10 %&gt;% select(parent_id, block_id=node_id, block = meaning), by=c(&quot;chapter_id&quot;=&quot;parent_id&quot;)) %&gt;%
   mutate(
     code_range=gsub(block, pattern=&quot;^([A-Z]*\\d{2,3}\\-[A-Z]*\\d{2,3})\\s.*$&quot;, replacement = &quot;\\1&quot;)
@@ -464,7 +470,7 @@ chapter_block_code_icd10 &lt;-
     csv = generate_csv_from_range(code_range, icd_version = 10)
     ) %&gt;%
   separate_rows(csv, sep=&quot;\\,&quot;) %&gt;%
-  select(chapter, block, csv) %&gt;%
+  select(chapter, chapter_num, block, prefix=csv, icd_version) %&gt;%
   distinct
 
 map_icd_chapter_block_code &lt;-
@@ -474,27 +480,211 @@ map_icd_chapter_block_code &lt;-
   )
 
 write_csv(map_icd_chapter_block_code, path = &quot;./processed_ICD_codes/map_icd_chapter_block_code.csv&quot;)</code></pre>
-<p>See examples:</p>
+<div id="example-icd-9" class="section level3">
+<h3>Example ICD-9:</h3>
 <pre class="r"><code>head(chapter_block_code_icd9)</code></pre>
-<pre><code>## # A tibble: 6 x 3
-##   chapter                                 block                       csv  
-##   &lt;chr&gt;                                   &lt;chr&gt;                       &lt;chr&gt;
-## 1 Chapter I Infectious and parasitic dis~ 001-009 Intestinal infecti~ 001  
-## 2 Chapter I Infectious and parasitic dis~ 001-009 Intestinal infecti~ 002  
-## 3 Chapter I Infectious and parasitic dis~ 001-009 Intestinal infecti~ 003  
-## 4 Chapter I Infectious and parasitic dis~ 001-009 Intestinal infecti~ 004  
-## 5 Chapter I Infectious and parasitic dis~ 001-009 Intestinal infecti~ 005  
-## 6 Chapter I Infectious and parasitic dis~ 001-009 Intestinal infecti~ 006</code></pre>
+<pre><code>## # A tibble: 6 x 5
+##   chapter                  chapter_num block             prefix icd_version
+##   &lt;chr&gt;                    &lt;chr&gt;       &lt;chr&gt;             &lt;chr&gt;        &lt;dbl&gt;
+## 1 Chapter I Infectious an~ 1           001-009 Intestin~ 001              9
+## 2 Chapter I Infectious an~ 1           001-009 Intestin~ 002              9
+## 3 Chapter I Infectious an~ 1           001-009 Intestin~ 003              9
+## 4 Chapter I Infectious an~ 1           001-009 Intestin~ 004              9
+## 5 Chapter I Infectious an~ 1           001-009 Intestin~ 005              9
+## 6 Chapter I Infectious an~ 1           001-009 Intestin~ 006              9</code></pre>
+</div>
+<div id="example-icd-10" class="section level3">
+<h3>Example ICD-10:</h3>
 <pre class="r"><code>head(chapter_block_code_icd10)</code></pre>
-<pre><code>## # A tibble: 6 x 3
-##   chapter                                block                        csv  
-##   &lt;chr&gt;                                  &lt;chr&gt;                        &lt;chr&gt;
-## 1 Chapter I Certain infectious and para~ A00-A09 Intestinal infectio~ A00  
-## 2 Chapter I Certain infectious and para~ A00-A09 Intestinal infectio~ A01  
-## 3 Chapter I Certain infectious and para~ A00-A09 Intestinal infectio~ A02  
-## 4 Chapter I Certain infectious and para~ A00-A09 Intestinal infectio~ A03  
-## 5 Chapter I Certain infectious and para~ A00-A09 Intestinal infectio~ A04  
-## 6 Chapter I Certain infectious and para~ A00-A09 Intestinal infectio~ A05</code></pre>
+<pre><code>## # A tibble: 6 x 5
+##   chapter                  chapter_num block             prefix icd_version
+##   &lt;chr&gt;                    &lt;chr&gt;       &lt;chr&gt;             &lt;chr&gt;        &lt;dbl&gt;
+## 1 Chapter I Certain infec~ 1           A00-A09 Intestin~ A00             10
+## 2 Chapter I Certain infec~ 1           A00-A09 Intestin~ A01             10
+## 3 Chapter I Certain infec~ 1           A00-A09 Intestin~ A02             10
+## 4 Chapter I Certain infec~ 1           A00-A09 Intestin~ A03             10
+## 5 Chapter I Certain infec~ 1           A00-A09 Intestin~ A04             10
+## 6 Chapter I Certain infec~ 1           A00-A09 Intestin~ A05             10</code></pre>
+</div>
+<div id="equivalent-chapters-between-version-9-and-10" class="section level2">
+<h2>Equivalent chapters between version 9 and 10:</h2>
+<pre class="r"><code>map_icd_equivalent_chapters &lt;-
+  tibble(icd_9=character(0),icd_10=character(0)) %&gt;%
+  add_case(icd_9 = &quot;1&quot;, icd_10 = &quot;1&quot;) %&gt;%
+  add_case(icd_9 = &quot;2&quot;, icd_10 = &quot;2&quot;) %&gt;%
+  add_case(icd_9 = &quot;3&quot;, icd_10 = &quot;4&quot;) %&gt;%
+  add_case(icd_9 = &quot;4&quot;, icd_10 = &quot;3&quot;) %&gt;%
+  add_case(icd_9 = &quot;5&quot;, icd_10 = &quot;5&quot;) %&gt;%
+  add_case(icd_9 = &quot;6&quot;, icd_10 = &quot;6,7,8&quot;) %&gt;%
+  add_case(icd_9 = &quot;7&quot;, icd_10 = &quot;9&quot;) %&gt;%
+  add_case(icd_9 = &quot;8&quot;, icd_10 = &quot;10&quot;) %&gt;%
+  add_case(icd_9 = &quot;9&quot;, icd_10 = &quot;11&quot;) %&gt;%
+  add_case(icd_9 = &quot;10&quot;, icd_10 = &quot;14&quot;) %&gt;%
+  add_case(icd_9 = &quot;11&quot;, icd_10 = &quot;15&quot;) %&gt;%
+  add_case(icd_9 = &quot;12&quot;, icd_10 = &quot;12&quot;) %&gt;%
+  add_case(icd_9 = &quot;13&quot;, icd_10 = &quot;13&quot;) %&gt;%
+  add_case(icd_9 = &quot;14&quot;, icd_10 = &quot;17&quot;) %&gt;%
+  add_case(icd_9 = &quot;15&quot;, icd_10 = &quot;16&quot;) %&gt;%
+  add_case(icd_9 = &quot;16&quot;, icd_10 = &quot;18&quot;) %&gt;%
+  add_case(icd_9 = &quot;17&quot;, icd_10 = &quot;19&quot;) %&gt;%
+  add_case(icd_9 = &quot;E-codes&quot;, icd_10 = &quot;20&quot;) %&gt;%
+  add_case(icd_9 = &quot;V-codes&quot;, icd_10 = &quot;21&quot;) %&gt;%
+  add_case(icd_9 = NA_character_, icd_10 = &quot;22&quot;)
+
+write_csv(map_icd_equivalent_chapters, path = &quot;./processed_ICD_codes/map_icd_equivalent_chapters.csv&quot;)</code></pre>
+</div>
+<div id="example-of-chapter-equivalence" class="section level2">
+<h2>Example of chapter equivalence:</h2>
+<pre class="r"><code>map_icd_equivalent_chapters %&gt;%
+  separate_rows(icd_10, sep=&quot;,&quot;) %&gt;%
+  left_join(chapter_block_code_icd9 %&gt;% select(chapter_icd_9=chapter, chapter_num) %&gt;% distinct, by=c(&quot;icd_9&quot;=&quot;chapter_num&quot;)) %&gt;%
+  left_join(chapter_block_code_icd10 %&gt;% select(chapter_icd_10=chapter, chapter_num) %&gt;% distinct, by=c(&quot;icd_10&quot;=&quot;chapter_num&quot;)) %&gt;%
+  knitr::kable()</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">icd_9</th>
+<th align="left">icd_10</th>
+<th align="left">chapter_icd_9</th>
+<th align="left">chapter_icd_10</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">1</td>
+<td align="left">Chapter I Infectious and parasitic diseases (001-139)</td>
+<td align="left">Chapter I Certain infectious and parasitic diseases</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">2</td>
+<td align="left">Chapter II Neoplasms (140-239)</td>
+<td align="left">Chapter II Neoplasms</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">4</td>
+<td align="left">Chapter III Endocrine, nutritional and metabolic diseases, and immunity disorders (240-279)</td>
+<td align="left">Chapter IV Endocrine, nutritional and metabolic diseases</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">3</td>
+<td align="left">Chapter IV Diseases of the blood and blood-forming organs (280-289)</td>
+<td align="left">Chapter III Diseases of the blood and blood-forming organs and certain disorders involving the immune mechanism</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">5</td>
+<td align="left">Chapter V Mental disorders (230-319)</td>
+<td align="left">Chapter V Mental and behavioural disorders</td>
+</tr>
+<tr class="even">
+<td align="left">6</td>
+<td align="left">6</td>
+<td align="left">Chapter VI Diseases of the nervous system and the sense organs (320-389)</td>
+<td align="left">Chapter VI Diseases of the nervous system</td>
+</tr>
+<tr class="odd">
+<td align="left">6</td>
+<td align="left">7</td>
+<td align="left">Chapter VI Diseases of the nervous system and the sense organs (320-389)</td>
+<td align="left">Chapter VII Diseases of the eye and adnexa</td>
+</tr>
+<tr class="even">
+<td align="left">6</td>
+<td align="left">8</td>
+<td align="left">Chapter VI Diseases of the nervous system and the sense organs (320-389)</td>
+<td align="left">Chapter VIII Diseases of the ear and mastoid process</td>
+</tr>
+<tr class="odd">
+<td align="left">7</td>
+<td align="left">9</td>
+<td align="left">Chapter VII Diseases of the circulatory system (390-459)</td>
+<td align="left">Chapter IX Diseases of the circulatory system</td>
+</tr>
+<tr class="even">
+<td align="left">8</td>
+<td align="left">10</td>
+<td align="left">Chapter VIII Diseases of the respiratory system (460-519)</td>
+<td align="left">Chapter X Diseases of the respiratory system</td>
+</tr>
+<tr class="odd">
+<td align="left">9</td>
+<td align="left">11</td>
+<td align="left">Chapter IX Diseases of the digestive system (520-579)</td>
+<td align="left">Chapter XI Diseases of the digestive system</td>
+</tr>
+<tr class="even">
+<td align="left">10</td>
+<td align="left">14</td>
+<td align="left">Chapter X Diseases of the genitourinary system (580-629)</td>
+<td align="left">Chapter XIV Diseases of the genitourinary system</td>
+</tr>
+<tr class="odd">
+<td align="left">11</td>
+<td align="left">15</td>
+<td align="left">Chapter XI Complications of pregnancy, childbirth, and the puerperium (630-679)</td>
+<td align="left">Chapter XV Pregnancy, childbirth and the puerperium</td>
+</tr>
+<tr class="even">
+<td align="left">12</td>
+<td align="left">12</td>
+<td align="left">Chapter XII Diseases of the skin and subcutaneous tissue (680-709)</td>
+<td align="left">Chapter XII Diseases of the skin and subcutaneous tissue</td>
+</tr>
+<tr class="odd">
+<td align="left">13</td>
+<td align="left">13</td>
+<td align="left">Chapter XIII Diseases of the musculoskeletal system and connective tissue (710-739)</td>
+<td align="left">Chapter XIII Diseases of the musculoskeletal system and connective tissue</td>
+</tr>
+<tr class="even">
+<td align="left">14</td>
+<td align="left">17</td>
+<td align="left">Chapter XIV Congenital anomalies (740-759)</td>
+<td align="left">Chapter XVII Congenital malformations, deformations and chromosomal abnormalities</td>
+</tr>
+<tr class="odd">
+<td align="left">15</td>
+<td align="left">16</td>
+<td align="left">Chapter XV Certain conditions originating in the perinatal period (760-779)</td>
+<td align="left">Chapter XVI Certain conditions originating in the perinatal period</td>
+</tr>
+<tr class="even">
+<td align="left">16</td>
+<td align="left">18</td>
+<td align="left">Chapter XVI Symptoms, signs, and ill-defined conditions (780-799)</td>
+<td align="left">Chapter XVIII Symptoms, signs and abnormal clinical and laboratory findings, not elsewhere classified</td>
+</tr>
+<tr class="odd">
+<td align="left">17</td>
+<td align="left">19</td>
+<td align="left">Chapter XVII Injury and poisoning (800-999)</td>
+<td align="left">Chapter XIX Injury, poisoning and certain other consequences of external causes</td>
+</tr>
+<tr class="even">
+<td align="left">E-codes</td>
+<td align="left">20</td>
+<td align="left">Chapter E - External causes of injury</td>
+<td align="left">Chapter XX External causes of morbidity and mortality</td>
+</tr>
+<tr class="odd">
+<td align="left">V-codes</td>
+<td align="left">21</td>
+<td align="left">Chapter V - Supplementary classification of factors influencing health status and contact with health services</td>
+<td align="left">Chapter XXI Factors influencing health status and contact with health services</td>
+</tr>
+<tr class="even">
+<td align="left">NA</td>
+<td align="left">22</td>
+<td align="left">NA</td>
+<td align="left">Chapter XXII Codes for special purposes</td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 
 

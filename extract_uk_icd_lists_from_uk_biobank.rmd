@@ -176,7 +176,12 @@ generate_csv_from_range <- function(code_range, icd_version) {
 chapter_block_code_icd9 <-
   processed_icd9 %>%
   filter(parent_id==0) %>%  # the main chapters
-  select(chapter=meaning, chapter_id=node_id) %>%
+  mutate(chapter_num = case_when(
+    node_id == 18 ~ "E-codes",
+    node_id == 19 ~ "V-codes",
+    TRUE ~ as.character(node_id)
+  )) %>%
+  select(chapter=meaning, chapter_id=node_id, chapter_num) %>%
   left_join(processed_icd9 %>% select(parent_id, block_id=node_id, block = meaning), by=c("chapter_id"="parent_id")) %>%
   mutate(
     code_range=gsub(block, pattern="^([A-Z]*\\d{2,3}\\-[A-Z]*\\d{2,3})\\s.*$", replacement = "\\1"),  # extract the e.g. E800-E859 ranges
@@ -184,13 +189,14 @@ chapter_block_code_icd9 <-
     csv = generate_csv_from_range(code_range, icd_version = 9)
     ) %>%
   separate_rows(csv, sep="\\,") %>%
-  select(chapter, block, csv) %>%
+  select(chapter, chapter_num, block, prefix=csv, icd_version) %>%
   distinct
   
 chapter_block_code_icd10 <-
   processed_icd10 %>%
   filter(parent_id==0) %>%  # the main chapters
-  select(chapter=meaning, chapter_id=node_id) %>%
+  mutate(chapter_num = as.character(node_id)) %>%
+  select(chapter=meaning, chapter_id=node_id, chapter_num) %>%
   left_join(processed_icd10 %>% select(parent_id, block_id=node_id, block = meaning), by=c("chapter_id"="parent_id")) %>%
   mutate(
     code_range=gsub(block, pattern="^([A-Z]*\\d{2,3}\\-[A-Z]*\\d{2,3})\\s.*$", replacement = "\\1")
@@ -200,7 +206,7 @@ chapter_block_code_icd10 <-
     csv = generate_csv_from_range(code_range, icd_version = 10)
     ) %>%
   separate_rows(csv, sep="\\,") %>%
-  select(chapter, block, csv) %>%
+  select(chapter, chapter_num, block, prefix=csv, icd_version) %>%
   distinct
 
 map_icd_chapter_block_code <-
@@ -212,10 +218,54 @@ map_icd_chapter_block_code <-
 write_csv(map_icd_chapter_block_code, path = "./processed_ICD_codes/map_icd_chapter_block_code.csv")
 ```
 
-See examples:
+### Example ICD-9:
 
 ```{r}
 head(chapter_block_code_icd9)
+```
+
+### Example ICD-10:
+
+```{r}
 head(chapter_block_code_icd10)
+```
+
+## Equivalent chapters between version 9 and 10:
+
+```{r}
+map_icd_equivalent_chapters <-
+  tibble(icd_9=character(0),icd_10=character(0)) %>%
+  add_case(icd_9 = "1", icd_10 = "1") %>%
+  add_case(icd_9 = "2", icd_10 = "2") %>%
+  add_case(icd_9 = "3", icd_10 = "4") %>%
+  add_case(icd_9 = "4", icd_10 = "3") %>%
+  add_case(icd_9 = "5", icd_10 = "5") %>%
+  add_case(icd_9 = "6", icd_10 = "6,7,8") %>%
+  add_case(icd_9 = "7", icd_10 = "9") %>%
+  add_case(icd_9 = "8", icd_10 = "10") %>%
+  add_case(icd_9 = "9", icd_10 = "11") %>%
+  add_case(icd_9 = "10", icd_10 = "14") %>%
+  add_case(icd_9 = "11", icd_10 = "15") %>%
+  add_case(icd_9 = "12", icd_10 = "12") %>%
+  add_case(icd_9 = "13", icd_10 = "13") %>%
+  add_case(icd_9 = "14", icd_10 = "17") %>%
+  add_case(icd_9 = "15", icd_10 = "16") %>%
+  add_case(icd_9 = "16", icd_10 = "18") %>%
+  add_case(icd_9 = "17", icd_10 = "19") %>%
+  add_case(icd_9 = "E-codes", icd_10 = "20") %>%
+  add_case(icd_9 = "V-codes", icd_10 = "21") %>%
+  add_case(icd_9 = NA_character_, icd_10 = "22")
+
+write_csv(map_icd_equivalent_chapters, path = "./processed_ICD_codes/map_icd_equivalent_chapters.csv")
+```
+
+## Example of chapter equivalence:
+
+```{r}
+map_icd_equivalent_chapters %>%
+  separate_rows(icd_10, sep=",") %>%
+  left_join(chapter_block_code_icd9 %>% select(chapter_icd_9=chapter, chapter_num) %>% distinct, by=c("icd_9"="chapter_num")) %>%
+  left_join(chapter_block_code_icd10 %>% select(chapter_icd_10=chapter, chapter_num) %>% distinct, by=c("icd_10"="chapter_num")) %>%
+  knitr::kable()
 ```
 
