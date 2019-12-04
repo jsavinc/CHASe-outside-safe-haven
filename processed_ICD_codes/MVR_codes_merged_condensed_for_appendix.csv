@@ -1,0 +1,5 @@
+category_mvr,codes_icd_9,codes_icd_10
+Maltreatment,"994.2 - 994.3, 995.5, E967","T73, T74, Y06, Y07"
+Assault,"E961 - E966, E968 - E969","X85 - Y03, Y04, Y05, Y08 - Y09"
+Undetermined cause,"E980 - E989, V68.2, V70.4, V71.4, V71.5, V71.6, V71.81","Y10 - Y34, Z04.0, Z04.5, Z04.8"
+Adverse social circumstances,"779.5, V15.4, V15.5, V15.89, V15.9, V17.0, V20.0, V20.1, V60, V61, V62.4, V62.5, V62.81, V62.89, V62.9, V69","P96.1, Z58.8, Z58.9, Z59.0, Z59.1, Z59.4, Z59.5, Z59.7, Z59.9, Z60 - Z63, Z64.4, Z65.3, Z65.8, Z65.9, Z72, Z74, Z76.1, Z76.2, Z81, Z86.5, Z91.6, Z91.8"

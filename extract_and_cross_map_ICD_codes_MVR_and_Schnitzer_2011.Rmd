@@ -289,8 +289,6 @@ mvr_codes_condensed <-
   select(grouping, category_mvr, icd_9, icd_10) %>%
   mutate(mvr_index=1:n())
 
-write_csv(x = mvr_codes_condensed %>% select(-mvr_index), path="./processed_ICD_codes/MVR_codes_for_appendix.csv")
-
 mvr_codes_long <-
   mvr_codes_condensed %>%
   pivot_longer(cols=starts_with("icd"), names_to="icd_version", values_to="codes") %>%
@@ -415,7 +413,7 @@ write_csv(mvr_codes_merged_long, path = "./processed_ICD_codes/MVR_codes_merged_
 ## Condensed version of merged codes
 
 ```{r}
-mvr_codes_merged_condensed <-
+mvr_codes_merged_condensed_long <-
   bind_rows(
     mvr_codes_condensed %>% filter(str_starts(grouping,"Maltreatment")) %>% select(-grouping) %>% pivot_longer(cols=starts_with("icd"), names_to="icd_version", values_to="code_decimal") %>%
   mutate(icd_version=parse_number(icd_version)),
@@ -430,10 +428,28 @@ mvr_codes_merged_condensed <-
   filter(str_detect(code_decimal,"\\-")|code_decimal %in% mvr_codes_merged_long$code_decimal) %>%  # only keep codes that are expressed as range or are actually in the final merged list
   select(-mvr_index, -agi_index) %>%
   distinct %>%
-  arrange(factor(category_mvr, levels = order_of_mvr_categories), icd_version, code_decimal)
-  
-# TODO! complete & save
-  
+  arrange(factor(category_mvr, levels = order_of_mvr_categories), icd_version, code_decimal) %>%
+  filter(  # go through list by hand, pick out redundant entries...
+    !(icd_version==9 & code_decimal %in% c("994.2","994.3")) &
+      !(icd_version==9 & code_decimal %in% c("E960", "E960 - E966", "E968", "E969")) &
+      !(icd_version==10 & code_decimal %in% c("X85 - Y09")) &
+      !(icd_version==9 & code_decimal %in% c("E983 - E989")) &
+      !(icd_version==10 & code_decimal %in% c("Y20 - Y34")) &
+      !(icd_version==10 & code_decimal %in% c("Z72.3 - Z72.9", "Z60", "Z61", "Z62", "Z63"))
+  ) %>%
+  group_by(
+    category_mvr, icd_version
+  ) %>%
+  summarise(
+    codes = paste(code_decimal, collapse = ", ")
+  )
+
+mvr_codes_merged_condensed_wide <-
+  mvr_codes_merged_condensed_long %>%
+  pivot_wider(names_from = icd_version, values_from = codes, names_prefix = "codes_icd_") %>%
+  arrange(factor(category_mvr, levels = order_of_mvr_categories))
+
+write_csv(mvr_codes_merged_condensed_wide, path = "./processed_ICD_codes/MVR_codes_merged_condensed_for_appendix.csv")
 ```
 
 
@@ -1139,7 +1155,7 @@ write_csv(index_table_schnitzer_2011_exclusions_icd9, path = "./processed_ICD_co
 write_csv(index_table_schnitzer_2011_exclusions_icd10, path = "./processed_ICD_codes/schnitzer_et_al_2011_empirical_exclusions_index_icd10.csv")
 ```
 
-# Writing human-readable spreadsheets of cross-mapping
+# Writing human-readable spreadsheets of Schnitzer et al 2011 cross-mapping
 
 For the purposes of validation and dissemination of the cross-mapping, it is useful to convert the lists of cross-mapped codes in long format to a condensed spreadsheet format also.
 
@@ -1183,7 +1199,9 @@ readable_spreadsheet_mapping <- list(
         TRUE ~ as.character(NA)
       )
     ) %>%
-    select(-inclusion_index),
+    left_join(
+      schnitzer_2011_inclusions_empirical_icd9cm_and_icd9 %>% select(inclusion_index, condition=description_icd9cm), by="inclusion_index"
+    ),
    exclusions = 
     index_table_schnitzer_2011_exclusions_icd9cm_condensed %>%
   mutate(
@@ -1214,10 +1232,10 @@ readable_spreadsheet_mapping <- list(
       TRUE ~ as.character(NA)
     )
   ) %>%
-    select(-exclusion_index),
+    rename(icd9cm = exclusions),
   malnutrition_exclusions = 
     schnitzer_2011_malnutrition_exclusions_icd9_icd10 %>%
-    select(-malnutrition_index, condition_schnitzer=condition, icd9=icd9_range, icd10=icd10_range) %>%
+    rename(condition_schnitzer=condition, icd9=icd9_range, icd10=icd10_range) %>%
     mutate(
     comments_icd9 = case_when(
       code=="277.00" ~ "cystic fibrosis is 277.0",
@@ -1255,12 +1273,15 @@ readable_spreadsheet_mapping <- list(
       TRUE ~ NA_character_
       )
     ) %>%
-    select(code, icd9, comments_icd9, icd10, comments_icd10),
+    select(icd9cm = code, icd9, comments_icd9, icd10, comments_icd10, malnutrition_index) %>%
+    left_join(
+      schnitzer_2011_malnutrition_exclusions_icd9_icd10 %>% select(malnutrition_index, condition), by="malnutrition_index"
+    ),
   additional_requirements =
     schnitzer_2011_inclusions_empirical_extra_requirements_icd9cm %>%
     rename(code = extra_required_range_icd9cm) %>%
     bind_cols(schnitzer_2011_inclusions_empirical_extra_requirements_icd9_icd10_condensed) %>%
-    select(-matches("inclusion_index")) %>%
+    select(-matches("inclusion_index1")) %>%
     mutate(
       comments_icd9 = NA_character_,
       comments_icd10 = case_when(
@@ -1268,14 +1289,30 @@ readable_spreadsheet_mapping <- list(
       code == "466.0–466.19" ~ "Acute bronchitis and bronchiolitis; added ICD-10 J68 respiratory conditions due to exposure to chemicals",  # 
       TRUE ~ NA_character_
       )
-    )
-)
+    ) %>%
+    rename(icd9cm=code)
+) %>%
+  map(., ~distinct(.))
+
+readable_spreadsheet_mapping_with_codes <-
+  readable_spreadsheet_mapping %>%
+  map(., .f = ~select(., -matches("_index|condition")))
+
+readable_spreadsheet_mapping_with_descriptions_instead_of_icd_cm_codes <-
+  readable_spreadsheet_mapping %>%
+  map(., .f = ~select(., -matches("_index|icd9cm")) %>% select(matches("condition"), everything()))
+
+readable_spreadsheet_mapping_full <-
+  readable_spreadsheet_mapping %>%
+  map(., .f = ~select(.,matches("condition"),matches("_index"),everything()))
 ```
 
 ## Save table as excel
 
 ```{r}
-openxlsx::write.xlsx(x=readable_spreadsheet_mapping, file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix.xlsx")
+openxlsx::write.xlsx(x=readable_spreadsheet_mapping_with_codes, file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_icd9cm_codes.xlsx")
+openxlsx::write.xlsx(x=readable_spreadsheet_mapping_with_descriptions_instead_of_icd_cm_codes, file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_condition_descriptions.xlsx")
+openxlsx::write.xlsx(x=readable_spreadsheet_mapping_full, file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_codes_and_descriptions.xlsx")
 ```
 
 # Conclusion
