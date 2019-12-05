@@ -20,6 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(readxl)
 library(knitr)
+library(huxtable)
 ```
 
 # Intro
@@ -1160,13 +1161,13 @@ write_csv(index_table_schnitzer_2011_exclusions_icd10, path = "./processed_ICD_c
 For the purposes of validation and dissemination of the cross-mapping, it is useful to convert the lists of cross-mapped codes in long format to a condensed spreadsheet format also.
 
 ```{r}
-readable_spreadsheet_mapping <- list(
+readable_crossmapping_spreadsheet <- list(
   inclusions =
     schnitzer_2011_inclusions_empirical_icd9cm_and_icd9 %>%
     rename(icd9cm=code_decimal) %>%
     mutate(icd9 = as.character(icd::short_to_decimal(code_icd9))) %>%
     group_by(inclusion_index) %>%
-    summarise(icd9cm = paste(icd9cm,collapse=", "), icd9 = paste(icd9, collapse = ", ")) %>%
+    summarise(icd9cm = paste(icd9cm,collapse=", "), icd9 = paste(icd9, collapse = ", "), icd9 = ifelse(icd9=="NA", NA_character_, icd9)) %>%
     mutate(
       icd9cm = ifelse(str_starts(icd9cm, pattern="960"),"960-979",icd9cm),
       icd9 = ifelse(str_starts(icd9, pattern="960"),"960-979",icd9),
@@ -1180,7 +1181,7 @@ readable_spreadsheet_mapping <- list(
     left_join(
       schnitzer_2011_inclusions_icd10 %>%
       group_by(inclusion_index) %>%
-      summarise(icd10 = paste(icd10, collapse=", ")) %>%
+      summarise(icd10 = paste(icd10, collapse=", "), icd10 = ifelse(icd10=="NA", NA_character_, icd10)) %>%
       mutate(icd10 = ifelse(str_starts(icd10,pattern="T36"),"T36-T50",icd10)),
       by = "inclusion_index"
     ) %>%
@@ -1218,7 +1219,7 @@ readable_spreadsheet_mapping <- list(
       TRUE ~ as.character(NA)
     )
   ) %>%
-  left_join(index_table_schnitzer_2011_exclusions_icd9_10_condensed %>% select(exclusion_index, icd_10), by="exclusion_index") %>%
+  left_join(index_table_schnitzer_2011_exclusions_icd9_10_condensed %>% select(exclusion_index, icd10=icd_10), by="exclusion_index") %>%
   mutate(
     comments_icd10 = case_when(
       exclusions == "767" ~ "ICD-10 codes for Birth trauma plus several codes for non-traumatic brain haemorrhages that were included in ICD-9-CM 767 birth trauma due to hypoxia/anoxia (but excluding intraventricular & subarachnoid haemorrhages which werent included in ICD-9-CM code 767)",
@@ -1232,7 +1233,8 @@ readable_spreadsheet_mapping <- list(
       TRUE ~ as.character(NA)
     )
   ) %>%
-    rename(icd9cm = exclusions),
+    rename(icd9cm = exclusions) %>%
+    left_join(index_table_schnitzer_2011_map_inclusions_and_exclusions, by="exclusion_index"),
   malnutrition_exclusions = 
     schnitzer_2011_malnutrition_exclusions_icd9_icd10 %>%
     rename(condition_schnitzer=condition, icd9=icd9_range, icd10=icd10_range) %>%
@@ -1294,25 +1296,98 @@ readable_spreadsheet_mapping <- list(
 ) %>%
   map(., ~distinct(.))
 
-readable_spreadsheet_mapping_with_codes <-
-  readable_spreadsheet_mapping %>%
+readable_crossmapping_spreadsheet_with_codes <-
+  readable_crossmapping_spreadsheet %>%
   map(., .f = ~select(., -matches("_index|condition")))
 
-readable_spreadsheet_mapping_with_descriptions_instead_of_icd_cm_codes <-
-  readable_spreadsheet_mapping %>%
+readable_crossmapping_spreadsheet_with_descriptions_instead_of_icd_cm_codes <-
+  readable_crossmapping_spreadsheet %>%
   map(., .f = ~select(., -matches("_index|icd9cm")) %>% select(matches("condition"), everything()))
 
-readable_spreadsheet_mapping_full <-
-  readable_spreadsheet_mapping %>%
+readable_crossmapping_spreadsheet_full <-
+  readable_crossmapping_spreadsheet %>%
   map(., .f = ~select(.,matches("condition"),matches("_index"),everything()))
+
+condensed_crossmapping_spreadsheet <-
+  list(
+    inclusions = readable_crossmapping_spreadsheet$inclusions %>%
+      select(condition, inclusion_index, icd9, icd10) %>%
+      group_by(inclusion_index, condition) %>%
+      summarise(
+        icd9 = paste(icd9, collapse=", "), icd10 = paste(icd10, collapse=", ")
+      ) %>%
+      mutate_at(vars(icd9,icd10), ~ifelse(.=="NA",NA_character_,.)) %>%
+      left_join(
+        readable_crossmapping_spreadsheet$exclusions %>% 
+          select(inclusion_index, icd9, icd10) %>%
+          distinct %>%
+          group_by(inclusion_index) %>%
+        summarise(
+          exclusions_icd9 = paste(icd9, collapse=", "), exclusions_icd10 = paste(icd10, collapse=", ")
+        ),
+        by="inclusion_index"
+      ) %>%
+      mutate(
+        # flag_4th_digit = str_detect(exclusions_icd9, pattern="b$"),
+        exclusions_icd9 = gsub(exclusions_icd9, pattern="b$", replacement="\u00b9"),  # add a superscript 1 sign for use in the footnotes
+        icd9 = if_else(inclusion_index==23, paste0(icd9, "\u00b2"), icd9),
+        icd10 = if_else(inclusion_index==23, paste0(icd10, "\u00b2"), icd10),
+        icd10 = if_else(inclusion_index==38, paste0(icd10, "\u00b3"), icd10)
+        ) %>%
+      ungroup %>%
+      select(-inclusion_index),
+    malnutrition_exclusions =
+      readable_crossmapping_spreadsheet$malnutrition_exclusions %>%
+      select(icd9, icd10),
+    additional_requirements = 
+      readable_crossmapping_spreadsheet$additional_requirements %>%
+      select(icd9, icd10)
+  )
 ```
 
 ## Save table as excel
 
 ```{r}
-openxlsx::write.xlsx(x=readable_spreadsheet_mapping_with_codes, file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_icd9cm_codes.xlsx")
-openxlsx::write.xlsx(x=readable_spreadsheet_mapping_with_descriptions_instead_of_icd_cm_codes, file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_condition_descriptions.xlsx")
-openxlsx::write.xlsx(x=readable_spreadsheet_mapping_full, file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_codes_and_descriptions.xlsx")
+## function that replaces comments with blanks, and codes with "N/A" where they are NA
+replace_na_in_excel <- function(x) {
+  replace_na(data=x,list(icd9="N/A",icd10="N/A",comments_icd9="",comments_icd10="", exclusions_icd9="", exclusions_icd10=""))
+}
+
+add_zero_width_space <- function(this_string) {
+  if_else(
+    condition = str_starts(this_string, pattern="\\d"),
+    true = paste0("\u200b",this_string),
+    false = this_string
+  )
+}
+
+excel_condensed_crossmapping_spreadsheet <- openxlsx::createWorkbook()
+
+condensed_crossmapping_spreadsheet$inclusions %>%
+  replace_na(list(icd9="N/A",icd10="N/A",exclusions_icd9="", exclusions_icd10="")) %>%
+  mutate_all(add_zero_width_space) %>%
+  as_hux(add_colnames = TRUE) %>%
+  add_footnote(text="\u00b9 Excluding codes where 4th digit is .6 or .7;\u00b2 For all exclusion codes see Other severe malnutrition exclusions table; \u00b3 Include only with co-ocurring codes in 2nd hand smoke code table", number_format = list(as.character)) %>%
+  as_Workbook(Workbook=excel_condensed_crossmapping_spreadsheet, sheet="Inclusions") %>%
+  (function(x) openxlsx::setColWidths(wb = x, sheet = 1, cols = 1:ncol(condensed_crossmapping_spreadsheet$inclusions), widths = 40))
+
+condensed_crossmapping_spreadsheet$malnutrition_exclusions %>%
+  mutate_all(add_zero_width_space) %>%
+  as_hux(add_colnames = TRUE) %>%
+  as_Workbook(Workbook=excel_condensed_crossmapping_spreadsheet, sheet="Malnutrition exclusions") %>%
+  (function(x) openxlsx::setColWidths(wb = x, sheet = 2, cols = 1:ncol(condensed_crossmapping_spreadsheet$malnutrition_exclusions), widths = 40))
+
+condensed_crossmapping_spreadsheet$additional_requirements %>%
+  mutate_all(add_zero_width_space) %>%
+  as_hux(add_colnames = TRUE) %>%
+  as_Workbook(Workbook=excel_condensed_crossmapping_spreadsheet, sheet="Additional requirements") %>%
+  (function(x) openxlsx::setColWidths(wb = x, sheet = 3, cols = 1:ncol(condensed_crossmapping_spreadsheet$additional_requirements), widths = 40))
+
+openxlsx::saveWorkbook(wb = excel_condensed_crossmapping_spreadsheet, file = "./processed_ICD_codes/Schnitzer_et_al_2011_condensed_ICD_codes_list_for_appendix.xlsx", overwrite = TRUE)
+
+openxlsx::write.xlsx(x=readable_crossmapping_spreadsheet_with_codes %>% map(., replace_na_in_excel), file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_icd9cm_codes.xlsx")
+openxlsx::write.xlsx(x=readable_crossmapping_spreadsheet_with_descriptions_instead_of_icd_cm_codes %>% map(., replace_na_in_excel), file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_condition_descriptions.xlsx")
+openxlsx::write.xlsx(x=readable_crossmapping_spreadsheet_full %>% map(., replace_na_in_excel), file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_codes_and_descriptions.xlsx")
 ```
 
 # Conclusion

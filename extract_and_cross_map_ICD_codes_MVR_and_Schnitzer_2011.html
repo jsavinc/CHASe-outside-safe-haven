@@ -262,7 +262,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Extract &amp; cross-map ICD codes from MVR papers and Schnitzer et al 2011</h1>
 <h4 class="author">Jan Savinc</h4>
-<h4 class="date">04 December, 2019</h4>
+<h4 class="date">05 December, 2019</h4>
 
 </div>
 
@@ -277,7 +277,19 @@ div.tocify {
 ## x dplyr::filter() masks stats::filter()
 ## x dplyr::lag()    masks stats::lag()</code></pre>
 <pre class="r"><code>library(readxl)
-library(knitr)</code></pre>
+library(knitr)
+library(huxtable)</code></pre>
+<pre><code>## 
+## Attaching package: 'huxtable'</code></pre>
+<pre><code>## The following object is masked from 'package:dplyr':
+## 
+##     add_rownames</code></pre>
+<pre><code>## The following object is masked from 'package:purrr':
+## 
+##     every</code></pre>
+<pre><code>## The following object is masked from 'package:ggplot2':
+## 
+##     theme_grey</code></pre>
 <div id="intro" class="section level1">
 <h1>Intro</h1>
 </div>
@@ -1552,51 +1564,454 @@ index_table_schnitzer_2011_categories &lt;-
   mutate(truncated_code = str_sub(code, end = -2)) %&gt;%
   left_join(icd9_codes_UK, by=c(&quot;truncated_code&quot;=&quot;code&quot;)) %&gt;%
   select(code_decimal.x, description_icd9cm, truncated_code, meaning)</code></pre>
-<pre><code>## # A tibble: 4 x 4
-##   code_decimal.x description_icd9cm   truncated_code meaning               
-##   &lt;chr&gt;          &lt;chr&gt;                &lt;chr&gt;          &lt;chr&gt;                 
-## 1 V71.81         Observation for abu~ V718           V718 Observation for ~
-## 2 362.81         Retinal hemorrhage   3628           3628 Other retinal di~
-## 3 852.2          Traumatic subdural ~ 852            852 Subarachnoid, sub~
-## 4 E869.4         Second-hand tobacco~ E869           E869 Accidental poiso~</code></pre>
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 100%; margin-left: 0%; margin-right: auto;  ">
+<col><col><col><col><tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0.4pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">code_decimal.x</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">description_icd9cm</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">truncated_code</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0.4pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">meaning</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V71.81</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Observation for abuse/neglect</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V718</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V718 Observation for other specified suspected condition</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">362.81</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">Retinal hemorrhage</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">3628</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">3628 Other retinal disorders</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">852.2</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Traumatic subdural hemorrhage</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">852</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">852 Subarachnoid, subdural and extradural haemorrhage, following injury</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">E869.4</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">Second-hand tobacco smoke</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">E869</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">E869 Accidental poisoning by other gases and vapours</td>
+</tr>
+</table>
+
 <p>Looking at the above, some truncated codes matched to ICD-9 codes all appear too unspecific as there’s no guarantee that they would have been used for the same conditions.</p>
 <p>The ICD-9 heading <em>852 Subarachnoid, subdural and extradural haemorrhage, following injury</em> seems to be a decent fit for ICD-9-CM <em>852.2 Traumatic subdural hemorrhage</em>. Although the latter code is a sub-code of <em>852</em> in ICD-9-CM, the 4th digit in the CM system specifies the location of the haemorrhage, whereas in ICD-9 the 4th digit specifies whether an an open intercranial wound was present - this distinction is made in ICD-9-CM at 5th digit level.</p>
 <p>Note that there is already another <em>852</em> heading entry in the Schnitzer 2011 list, <em>852.2 Traumatic subarachnoid hemorrhage</em>; this will also be included by adding the less specific <em>852</em> code to the inclusions.</p>
 <p>For the other ICD-9-CM codes without a match in ICD-9, we can attempt to search for keywords:</p>
 <p><strong>362.81 Retinal hemorrhage</strong></p>
 <pre class="r"><code>icd9_codes_UK %&gt;% filter(str_detect(tolower(meaning), pattern=&quot;retina&quot;) &amp; str_detect(tolower(meaning), pattern=&quot;h.*morrhage|bleed&quot;))</code></pre>
-<pre><code>## # A tibble: 0 x 6
-## # ... with 6 variables: code &lt;chr&gt;, meaning &lt;chr&gt;, node_id &lt;dbl&gt;,
-## #   parent_id &lt;dbl&gt;, selectable &lt;chr&gt;, code_decimal &lt;chr&gt;</code></pre>
+<pre><code>## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf</code></pre>
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 20%; margin-left: 0%; margin-right: auto;  ">
+<col><col><col><col><col><col><tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0.4pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">code</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">meaning</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">node_id</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">parent_id</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">selectable</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0.4pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">code_decimal</td>
+</tr>
+</table>
+
 <p><strong>V71.81 Observation for abuse/neglect</strong></p>
 <pre class="r"><code>icd9_codes_UK %&gt;% filter(str_detect(tolower(meaning), pattern=&quot;observation&quot;) | str_detect(tolower(meaning), pattern=&quot;abus|neglect&quot;))</code></pre>
-<pre><code>## # A tibble: 35 x 6
-##    code  meaning                  node_id parent_id selectable code_decimal
-##    &lt;chr&gt; &lt;chr&gt;                      &lt;dbl&gt;     &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;       
-##  1 305   305 Nondependent abuse ~    2646        57 N          305         
-##  2 3050  3050 Nondependent abuse~    2647      2646 Y          305.0       
-##  3 3051  3051 Nondependent abuse~    2648      2646 Y          305.1       
-##  4 3052  3052 Nondependent abuse~    2649      2646 Y          305.2       
-##  5 3053  3053 Nondependent abuse~    2650      2646 Y          305.3       
-##  6 3054  3054 Nondependent abuse~    2651      2646 Y          305.4       
-##  7 3055  3055 Nondependent abuse~    2652      2646 Y          305.5       
-##  8 3056  3056 Nondependent abuse~    2653      2646 Y          305.6       
-##  9 3057  3057 Nondependent abuse~    2654      2646 Y          305.7       
-## 10 3058  3058 Nondependent abuse~    2655      2646 Y          305.8       
-## # ... with 25 more rows</code></pre>
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 100%; margin-left: 0%; margin-right: auto;  ">
+<col><col><col><col><col><col><tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0.4pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">code</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">meaning</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">node_id</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">parent_id</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">selectable</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0.4pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">code_decimal</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">305</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">305 Nondependent abuse of drugs</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">2.65e+03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">57&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">N</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">305</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">3050</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">3050 Nondependent abuse of alcohol</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.65e+03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.65e+03</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">305.0</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">3051</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">3051 Nondependent abuse of tobacco</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">2.65e+03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">2.65e+03</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">305.1</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">3052</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">3052 Nondependent abuse of cannabis</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.65e+03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.65e+03</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">305.2</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">3053</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">3053 Nondependent abuse of hallucinogens</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">2.65e+03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">2.65e+03</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">305.3</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">3054</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">3054 Nondependent abuse of barbiturates and tranquillizers</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.65e+03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.65e+03</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">305.4</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">3055</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">3055 Nondependent abuse of morphine type drugs</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">2.65e+03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">2.65e+03</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">305.5</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">3056</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">3056 Nondependent abuse of cocaine type drugs</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.65e+03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.65e+03</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">305.6</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">3057</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">3057 Nondependent abuse of amphetamine type drugs</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">2.65e+03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">2.65e+03</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">305.7</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">3058</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">3058 Nondependent abuse of antidepressants</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.66e+03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">2.65e+03</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">305.8</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">3059</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">3059 Nondependent abuse of other, mixed or unspecified drugs</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">2.66e+03</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">2.65e+03</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">305.9</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">E904</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">E904 Hunger, thirst, exposure, neglect</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">161&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">N</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">E904</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E9040</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E9040 Abandonment,neglect of infants/helpless persons</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">N</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E904.0</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">E90400</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">E90400 Abandonment,neglect of infants/helpless persons (at: home)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.15e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">E904.00</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E90401</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E90401 Abandonment,neglect of infants/helpless persons (at:farm)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E904.01</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">E90402</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">E90402 Abandonment,neglect of infants/helpless persons (at: mine, quarry)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.15e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">E904.02</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E90403</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E90403 Abandonment,neglect of infants/helpless persons (at:industrial place)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E904.03</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">E90404</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">E90404 Abandonment,neglect of infants/helpless persons (at: sports place)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.15e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">E904.04</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E90405</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E90405 Abandonment,neglect of infants/helpless persons (at: street)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E904.05</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">E90406</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">E90406 Abandonment,neglect of infants/helpless persons (at:public building)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.15e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">E904.06</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E90407</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E90407 Abandonment,neglect of infants/helpless persons (at: residential inst'n)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E904.07</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">E90408</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">E90408 Abandonment,neglect of infants/helpless persons (at: other spec.place)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.15e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">E904.08</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E90409</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E90409 Abandonment,neglect of infants/helpless persons (at:unspecified place)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.15e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">E904.09</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">E9684</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">E9684 Assault by criminal neglect</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.29e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.29e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">E968.4</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V71</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V71 Observation and evaluation for suspected conditions</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.36e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">180&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">N</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V71</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">V710</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">V710 Mental observation and evaluation</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.36e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.36e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">V71.0</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V711</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V711 Observation for suspected malignant neoplasm</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.36e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.36e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V71.1</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">V712</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">V712 Observation for suspected tuberculosis</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.36e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.36e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">V71.2</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V713</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V713 Observation following accident at work</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.36e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.36e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V71.3</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">V714</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">V714 Observation following other accident</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.36e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.36e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">V71.4</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V715</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V715 Observation following alleged rape or seduction</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.36e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.36e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V71.5</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">V716</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">V716 Observation following other inflicted injury</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.36e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.36e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">V71.6</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V717</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V717 Observation for suspected cardiovascular disease</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.36e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.36e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V71.7</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0pt 0.4pt; padding: 4pt 4pt 4pt 4pt;">V718</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">V718 Observation for other specified suspected condition</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.36e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">1.36e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;">V71.8</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0.4pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V719</td>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V719 Observation for unspecified suspected condition</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.36e+04</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">1.36e+04</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">Y</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0.4pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; background-color: rgb(242, 242, 242);">V71.9</td>
+</tr>
+</table>
+
 <p><strong>E869.4 Second-hand tobacco smoke</strong></p>
 <pre class="r"><code>icd9_codes_UK %&gt;% filter(str_detect(tolower(meaning), pattern=&quot;expos&quot;) &amp; str_detect(tolower(meaning), pattern=&quot;tobacco&quot;))</code></pre>
-<pre><code>## # A tibble: 0 x 6
-## # ... with 6 variables: code &lt;chr&gt;, meaning &lt;chr&gt;, node_id &lt;dbl&gt;,
-## #   parent_id &lt;dbl&gt;, selectable &lt;chr&gt;, code_decimal &lt;chr&gt;</code></pre>
+<pre><code>## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf</code></pre>
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 20%; margin-left: 0%; margin-right: auto;  ">
+<col><col><col><col><col><col><tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0.4pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">code</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">meaning</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">node_id</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">parent_id</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">selectable</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0.4pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">code_decimal</td>
+</tr>
+</table>
+
 <pre class="r"><code>icd9_codes_UK %&gt;% filter(str_detect(tolower(meaning), pattern=&quot;second&quot;) &amp; str_detect(tolower(meaning), pattern=&quot;tobacco&quot;))</code></pre>
-<pre><code>## # A tibble: 0 x 6
-## # ... with 6 variables: code &lt;chr&gt;, meaning &lt;chr&gt;, node_id &lt;dbl&gt;,
-## #   parent_id &lt;dbl&gt;, selectable &lt;chr&gt;, code_decimal &lt;chr&gt;</code></pre>
+<pre><code>## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf</code></pre>
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 20%; margin-left: 0%; margin-right: auto;  ">
+<col><col><col><col><col><col><tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0.4pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">code</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">meaning</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">node_id</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">parent_id</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">selectable</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0.4pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">code_decimal</td>
+</tr>
+</table>
+
 <pre class="r"><code>icd9_codes_UK %&gt;% filter(str_detect(tolower(meaning), pattern=&quot;second&quot;) &amp; str_detect(tolower(meaning), pattern=&quot;smoke&quot;))</code></pre>
-<pre><code>## # A tibble: 0 x 6
-## # ... with 6 variables: code &lt;chr&gt;, meaning &lt;chr&gt;, node_id &lt;dbl&gt;,
-## #   parent_id &lt;dbl&gt;, selectable &lt;chr&gt;, code_decimal &lt;chr&gt;</code></pre>
+<pre><code>## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf
+
+## Warning in max(nchar(as.character(col), type = &quot;width&quot;)): no non-missing
+## arguments to max; returning -Inf</code></pre>
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 20%; margin-left: 0%; margin-right: auto;  ">
+<col><col><col><col><col><col><tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0.4pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">code</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">meaning</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">node_id</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">parent_id</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">selectable</td>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.4pt 0.4pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt; font-weight: bold;">code_decimal</td>
+</tr>
+</table>
+
 <p>Second-hand smoke (ICD-9-M E869.4) was not included as a code in ICD-9, but it was in ICD-10 as code Z58.7 Exposure to tobacco smoke.</p>
 <p>To conclude, there don’t seem to be appropriate ICD-9 codes for the above ICD-9-CM codes.</p>
 <p>The following table shows the ICD-9-CM and ICD-9 codes matched up so you can see that the mapping makes sense:</p>
@@ -2740,13 +3155,13 @@ write_csv(index_table_schnitzer_2011_exclusions_icd10, path = &quot;./processed_
 <div id="writing-human-readable-spreadsheets-of-schnitzer-et-al-2011-cross-mapping" class="section level1">
 <h1>Writing human-readable spreadsheets of Schnitzer et al 2011 cross-mapping</h1>
 <p>For the purposes of validation and dissemination of the cross-mapping, it is useful to convert the lists of cross-mapped codes in long format to a condensed spreadsheet format also.</p>
-<pre class="r"><code>readable_spreadsheet_mapping &lt;- list(
+<pre class="r"><code>readable_crossmapping_spreadsheet &lt;- list(
   inclusions =
     schnitzer_2011_inclusions_empirical_icd9cm_and_icd9 %&gt;%
     rename(icd9cm=code_decimal) %&gt;%
     mutate(icd9 = as.character(icd::short_to_decimal(code_icd9))) %&gt;%
     group_by(inclusion_index) %&gt;%
-    summarise(icd9cm = paste(icd9cm,collapse=&quot;, &quot;), icd9 = paste(icd9, collapse = &quot;, &quot;)) %&gt;%
+    summarise(icd9cm = paste(icd9cm,collapse=&quot;, &quot;), icd9 = paste(icd9, collapse = &quot;, &quot;), icd9 = ifelse(icd9==&quot;NA&quot;, NA_character_, icd9)) %&gt;%
     mutate(
       icd9cm = ifelse(str_starts(icd9cm, pattern=&quot;960&quot;),&quot;960-979&quot;,icd9cm),
       icd9 = ifelse(str_starts(icd9, pattern=&quot;960&quot;),&quot;960-979&quot;,icd9),
@@ -2760,7 +3175,7 @@ write_csv(index_table_schnitzer_2011_exclusions_icd10, path = &quot;./processed_
     left_join(
       schnitzer_2011_inclusions_icd10 %&gt;%
       group_by(inclusion_index) %&gt;%
-      summarise(icd10 = paste(icd10, collapse=&quot;, &quot;)) %&gt;%
+      summarise(icd10 = paste(icd10, collapse=&quot;, &quot;), icd10 = ifelse(icd10==&quot;NA&quot;, NA_character_, icd10)) %&gt;%
       mutate(icd10 = ifelse(str_starts(icd10,pattern=&quot;T36&quot;),&quot;T36-T50&quot;,icd10)),
       by = &quot;inclusion_index&quot;
     ) %&gt;%
@@ -2798,7 +3213,7 @@ write_csv(index_table_schnitzer_2011_exclusions_icd10, path = &quot;./processed_
       TRUE ~ as.character(NA)
     )
   ) %&gt;%
-  left_join(index_table_schnitzer_2011_exclusions_icd9_10_condensed %&gt;% select(exclusion_index, icd_10), by=&quot;exclusion_index&quot;) %&gt;%
+  left_join(index_table_schnitzer_2011_exclusions_icd9_10_condensed %&gt;% select(exclusion_index, icd10=icd_10), by=&quot;exclusion_index&quot;) %&gt;%
   mutate(
     comments_icd10 = case_when(
       exclusions == &quot;767&quot; ~ &quot;ICD-10 codes for Birth trauma plus several codes for non-traumatic brain haemorrhages that were included in ICD-9-CM 767 birth trauma due to hypoxia/anoxia (but excluding intraventricular &amp; subarachnoid haemorrhages which werent included in ICD-9-CM code 767)&quot;,
@@ -2812,7 +3227,8 @@ write_csv(index_table_schnitzer_2011_exclusions_icd10, path = &quot;./processed_
       TRUE ~ as.character(NA)
     )
   ) %&gt;%
-    rename(icd9cm = exclusions),
+    rename(icd9cm = exclusions) %&gt;%
+    left_join(index_table_schnitzer_2011_map_inclusions_and_exclusions, by=&quot;exclusion_index&quot;),
   malnutrition_exclusions = 
     schnitzer_2011_malnutrition_exclusions_icd9_icd10 %&gt;%
     rename(condition_schnitzer=condition, icd9=icd9_range, icd10=icd10_range) %&gt;%
@@ -2874,23 +3290,95 @@ write_csv(index_table_schnitzer_2011_exclusions_icd10, path = &quot;./processed_
 ) %&gt;%
   map(., ~distinct(.))
 
-readable_spreadsheet_mapping_with_codes &lt;-
-  readable_spreadsheet_mapping %&gt;%
+readable_crossmapping_spreadsheet_with_codes &lt;-
+  readable_crossmapping_spreadsheet %&gt;%
   map(., .f = ~select(., -matches(&quot;_index|condition&quot;)))
 
-readable_spreadsheet_mapping_with_descriptions_instead_of_icd_cm_codes &lt;-
-  readable_spreadsheet_mapping %&gt;%
+readable_crossmapping_spreadsheet_with_descriptions_instead_of_icd_cm_codes &lt;-
+  readable_crossmapping_spreadsheet %&gt;%
   map(., .f = ~select(., -matches(&quot;_index|icd9cm&quot;)) %&gt;% select(matches(&quot;condition&quot;), everything()))
 
-readable_spreadsheet_mapping_full &lt;-
-  readable_spreadsheet_mapping %&gt;%
-  map(., .f = ~select(.,matches(&quot;condition&quot;),matches(&quot;_index&quot;),everything()))</code></pre>
+readable_crossmapping_spreadsheet_full &lt;-
+  readable_crossmapping_spreadsheet %&gt;%
+  map(., .f = ~select(.,matches(&quot;condition&quot;),matches(&quot;_index&quot;),everything()))
+
+condensed_crossmapping_spreadsheet &lt;-
+  list(
+    inclusions = readable_crossmapping_spreadsheet$inclusions %&gt;%
+      select(condition, inclusion_index, icd9, icd10) %&gt;%
+      group_by(inclusion_index, condition) %&gt;%
+      summarise(
+        icd9 = paste(icd9, collapse=&quot;, &quot;), icd10 = paste(icd10, collapse=&quot;, &quot;)
+      ) %&gt;%
+      mutate_at(vars(icd9,icd10), ~ifelse(.==&quot;NA&quot;,NA_character_,.)) %&gt;%
+      left_join(
+        readable_crossmapping_spreadsheet$exclusions %&gt;% 
+          select(inclusion_index, icd9, icd10) %&gt;%
+          distinct %&gt;%
+          group_by(inclusion_index) %&gt;%
+        summarise(
+          exclusions_icd9 = paste(icd9, collapse=&quot;, &quot;), exclusions_icd10 = paste(icd10, collapse=&quot;, &quot;)
+        ),
+        by=&quot;inclusion_index&quot;
+      ) %&gt;%
+      mutate(
+        # flag_4th_digit = str_detect(exclusions_icd9, pattern=&quot;b$&quot;),
+        exclusions_icd9 = gsub(exclusions_icd9, pattern=&quot;b$&quot;, replacement=&quot;\u00b9&quot;),  # add a superscript 1 sign for use in the footnotes
+        icd9 = if_else(inclusion_index==23, paste0(icd9, &quot;\u00b2&quot;), icd9),
+        icd10 = if_else(inclusion_index==23, paste0(icd10, &quot;\u00b2&quot;), icd10),
+        icd10 = if_else(inclusion_index==38, paste0(icd10, &quot;\u00b3&quot;), icd10)
+        ) %&gt;%
+      ungroup %&gt;%
+      select(-inclusion_index),
+    malnutrition_exclusions =
+      readable_crossmapping_spreadsheet$malnutrition_exclusions %&gt;%
+      select(icd9, icd10),
+    additional_requirements = 
+      readable_crossmapping_spreadsheet$additional_requirements %&gt;%
+      select(icd9, icd10)
+  )</code></pre>
 <div id="save-table-as-excel" class="section level2">
 <h2>Save table as excel</h2>
-<pre class="r"><code>openxlsx::write.xlsx(x=readable_spreadsheet_mapping_with_codes, file = &quot;./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_icd9cm_codes.xlsx&quot;)</code></pre>
+<pre class="r"><code>## function that replaces comments with blanks, and codes with &quot;N/A&quot; where they are NA
+replace_na_in_excel &lt;- function(x) {
+  replace_na(data=x,list(icd9=&quot;N/A&quot;,icd10=&quot;N/A&quot;,comments_icd9=&quot;&quot;,comments_icd10=&quot;&quot;, exclusions_icd9=&quot;&quot;, exclusions_icd10=&quot;&quot;))
+}
+
+add_zero_width_space &lt;- function(this_string) {
+  if_else(
+    condition = str_starts(this_string, pattern=&quot;\\d&quot;),
+    true = paste0(&quot;\u200b&quot;,this_string),
+    false = this_string
+  )
+}
+
+excel_condensed_crossmapping_spreadsheet &lt;- openxlsx::createWorkbook()
+
+condensed_crossmapping_spreadsheet$inclusions %&gt;%
+  replace_na(list(icd9=&quot;N/A&quot;,icd10=&quot;N/A&quot;,exclusions_icd9=&quot;&quot;, exclusions_icd10=&quot;&quot;)) %&gt;%
+  mutate_all(add_zero_width_space) %&gt;%
+  as_hux(add_colnames = TRUE) %&gt;%
+  add_footnote(text=&quot;\u00b9 Excluding codes where 4th digit is .6 or .7;\u00b2 For all exclusion codes see Other severe malnutrition exclusions table; \u00b3 Include only with co-ocurring codes in 2nd hand smoke code table&quot;, number_format = list(as.character)) %&gt;%
+  as_Workbook(Workbook=excel_condensed_crossmapping_spreadsheet, sheet=&quot;Inclusions&quot;) %&gt;%
+  (function(x) openxlsx::setColWidths(wb = x, sheet = 1, cols = 1:ncol(condensed_crossmapping_spreadsheet$inclusions), widths = 40))
+
+condensed_crossmapping_spreadsheet$malnutrition_exclusions %&gt;%
+  mutate_all(add_zero_width_space) %&gt;%
+  as_hux(add_colnames = TRUE) %&gt;%
+  as_Workbook(Workbook=excel_condensed_crossmapping_spreadsheet, sheet=&quot;Malnutrition exclusions&quot;) %&gt;%
+  (function(x) openxlsx::setColWidths(wb = x, sheet = 2, cols = 1:ncol(condensed_crossmapping_spreadsheet$malnutrition_exclusions), widths = 40))
+
+condensed_crossmapping_spreadsheet$additional_requirements %&gt;%
+  mutate_all(add_zero_width_space) %&gt;%
+  as_hux(add_colnames = TRUE) %&gt;%
+  as_Workbook(Workbook=excel_condensed_crossmapping_spreadsheet, sheet=&quot;Additional requirements&quot;) %&gt;%
+  (function(x) openxlsx::setColWidths(wb = x, sheet = 3, cols = 1:ncol(condensed_crossmapping_spreadsheet$additional_requirements), widths = 40))
+
+openxlsx::saveWorkbook(wb = excel_condensed_crossmapping_spreadsheet, file = &quot;./processed_ICD_codes/Schnitzer_et_al_2011_condensed_ICD_codes_list_for_appendix.xlsx&quot;, overwrite = TRUE)</code></pre>
 <pre><code>## Note: zip::zip() is deprecated, please use zip::zipr() instead</code></pre>
-<pre class="r"><code>openxlsx::write.xlsx(x=readable_spreadsheet_mapping_with_descriptions_instead_of_icd_cm_codes, file = &quot;./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_condition_descriptions.xlsx&quot;)
-openxlsx::write.xlsx(x=readable_spreadsheet_mapping_full, file = &quot;./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_codes_and_descriptions.xlsx&quot;)</code></pre>
+<pre class="r"><code>openxlsx::write.xlsx(x=readable_crossmapping_spreadsheet_with_codes %&gt;% map(., replace_na_in_excel), file = &quot;./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_icd9cm_codes.xlsx&quot;)
+openxlsx::write.xlsx(x=readable_crossmapping_spreadsheet_with_descriptions_instead_of_icd_cm_codes %&gt;% map(., replace_na_in_excel), file = &quot;./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_condition_descriptions.xlsx&quot;)
+openxlsx::write.xlsx(x=readable_crossmapping_spreadsheet_full %&gt;% map(., replace_na_in_excel), file = &quot;./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_codes_and_descriptions.xlsx&quot;)</code></pre>
 </div>
 </div>
 <div id="conclusion" class="section level1">
