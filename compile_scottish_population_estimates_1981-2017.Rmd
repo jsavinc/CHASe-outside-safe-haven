@@ -107,3 +107,49 @@ population_estimates_total_by_age <-
 write_csv(population_estimates_total, path = "./population_estimates/scotland_population_estimates_total_1981-2018.csv")
 write_csv(population_estimates_total_by_age, path = "./population_estimates/scotland_population_estimates_by_age_1981-2018.csv")
 ```
+
+# Population estimates broken down by health board
+
+## Getting file
+
+```{r}
+url_hb <- "https://www.nrscotland.gov.uk/files//statistics/population-estimates/time-series/mid-18/mid-year-pop-est-18-time-series-3.xlsx"
+file_hb <- "./raw/mid-year-pop-est-18-time-series-3.xlsx"
+
+if (!file.exists(file_hb)) {
+  download.file(
+    url=url_hb, 
+    destfile=file_hb, mode = "wb"
+    )
+}
+```
+
+## Extracting data
+
+```{r}
+sheets_hb <- excel_sheets(file_hb)[-1]
+
+data_hb <- 
+  map_dfr(
+    .x = sheets_hb,
+    .f = function(sheetname) {
+      read_excel(path=file_hb, sheet = sheetname, trim_ws = TRUE, skip = 2) %>%
+        slice(-1) %>%  # remove first row which is blank
+        filter(!Persons %in% c("Males","Females",NA)) %>%  # remove all non-informative rows
+        group_by(Persons) %>%  # add sex - order is both, male, female
+        mutate(sex=c("both","male","female")) %>%
+        ungroup %>%
+        rename(health_board=Persons) %>%  # name health board
+        rename_all(~tolower(.)) %>%  # change to lower case
+        mutate_all(~as.character(.)) %>%  # change numbers to character type for merging (all ages, 0, 1, 2, ... 90+)
+        pivot_longer(cols = -one_of("code","health_board","sex"), names_to = "age", values_to = "population") %>%  # convert to long format
+        mutate(year = as.numeric(sheetname))  # add year column
+    }
+  )
+```
+
+## Save as .csv
+
+```{r}
+write_csv(data_hb, path = "./population_estimates/scotland_population_estimates_by_health_board_age_sex_1981-2018.csv")
+```
