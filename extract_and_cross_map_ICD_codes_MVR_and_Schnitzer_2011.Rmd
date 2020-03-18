@@ -21,6 +21,7 @@ library(tidyverse)
 library(readxl)
 library(knitr)
 library(huxtable)
+library(fuzzyjoin)
 ```
 
 # Intro
@@ -452,6 +453,43 @@ mvr_codes_merged_condensed_wide <-
 
 write_csv(mvr_codes_merged_condensed_wide, path = "./processed_ICD_codes/MVR_codes_merged_condensed_for_appendix.csv")
 ```
+
+## MVR codes & age appropriateness
+
+When using MVR codes to tag mothers' medical records (past the age of 18), some codes become less appropriate to use, specifically codes for smoking, holiday relief care, etc. For this purpose we'll produce a complete list of captured ICD codes by MVR, so we can further decide on which ones would be appropriate to use with adults.
+
+Specifically, the codes in the categories Adverse social circumstances are suspect!
+
+```{r}
+mvr_codes_expanded_for_age_check <-
+  bind_rows(
+    icd9_codes_UK %>%
+    regex_inner_join(
+      mvr_codes_long %>%
+      filter(icd_version==9 & category_mvr=="Adverse social circumstances") %>% 
+      mutate(prefix = paste0("^",code)) %>%  # make a prefix for fuzzy matching
+      select(grouping, category_mvr,prefix)
+      , 
+      by=c("code"="prefix")
+    ) %>% mutate(icd_version=9)
+    ,
+    icd10_codes_UK %>%
+    regex_inner_join(
+      mvr_codes_long %>%
+      filter(icd_version==10 & category_mvr=="Adverse social circumstances") %>% 
+      mutate(prefix = paste0("^",code)) %>%  # make a prefix for fuzzy matching
+      select(grouping, category_mvr,prefix)
+      , 
+      by=c("code"="prefix")
+    ) %>% mutate(icd_version=10)
+  ) %>%
+  mutate(prefix=gsub(prefix,pattern="\\^", replacement="")) %>%
+  select(category_mvr, prefix, icd_version, code, meaning) %>%
+  mutate(notes="")  # add an empty notes column for manual review!
+
+write_csv(x = mvr_codes_expanded_for_age_check, path = "./processed_ICD_codes/MVR_codes_expanded_for_age_check.csv")
+```
+
 
 
 # Schnitzer et al. 2011
