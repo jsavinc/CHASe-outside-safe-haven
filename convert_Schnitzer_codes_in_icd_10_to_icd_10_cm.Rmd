@@ -1,0 +1,111 @@
+---
+title: Extract & cross-map ICD codes from MVR papers and Schnitzer et al 2011
+author: "Jan Savinc"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+  toc: true
+toc_float: true
+code_folding: hide
+editor_options: 
+  chunk_output_type: console
+bibliography: bibliography.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+The aim of this document is to produce an updated list of codes suggestive of maltreatment [@schnitzer_2011] - these were originally compiled for ICD-9-CM, and as part of the CHASe study [@dougall_2020] I translated them to ICD-9 and ICD-10, but for its use with US data, an ICD-10-CM version is needed.
+
+# Libraries
+
+We'll use `tidyverse` for data processing, and `icd` for its convenient functions for checking if codes exist in the ICD catalog. `knitr` is useful for printing nice tables in this document. `readxl` is for reading excel files!
+
+```{r}
+library(tidyverse)
+library(icd)
+library(knitr)
+library(readxl)
+```
+
+## `icd` settings
+
+`icd` will download data to a pre-defined location - we'll change that to a subfolder of this project.
+
+```{r}
+if (!dir.exists("./icd_data")) {
+  dir.create("./icd_data")
+}
+set_icd_data_dir(path = "./icd_data")  # tell icd to download data here
+# download_all_icd_data()  # tell icd to download everything
+get_icd10cm2018()  # TODO: work out how this might work!
+# get_icd10who2016()
+```
+
+
+## General Equivalence Mappings for the CM versions of ICD
+
+The latest GEM files were downloaded from the [CDC website](ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2018/Dxgem_2018.zip). The 2018 release was used because it was the most recent at the time of writing.
+
+```{r}
+gem_icd9cm <- 
+  read_fwf("./raw/2018_I9gem.txt", 
+           fwf_cols(
+             source = c(1, 5), 
+             target = c(7, 13), 
+             approximate=c(15,15), 
+             no_map=c(16,16), 
+             combination=c(17,17), 
+             scenario=c(18,18), 
+             choice_list=c(19,19) 
+             )
+           )
+
+gem_icd10cm <- 
+  read_fwf("./raw/2018_I10gem.txt", 
+           fwf_cols(
+             source = c(1, 7), 
+             target = c(9, 13), 
+             approximate=c(15,15), 
+             no_map=c(16,16),  
+             combination=c(17,17), 
+             scenario=c(18,18), 
+             choice_list=c(19,19) 
+             )
+           )
+
+## for our purposes the distinction between forward & backward maps isn't relevant, so we can combine the two to simplify finding matches
+gem_combined <- 
+  bind_rows(
+    gem_icd9cm %>% rename(icd9cm=source, icd10cm=target) %>% mutate(direction = "f"),
+    gem_icd10cm %>% rename(icd9cm=target, icd10cm=source) %>% mutate(direction = "b")
+  )
+```
+
+## Previously translated ICD-10 codes
+
+```{r}
+previously_translated_codes_file <- "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_for_appendix_with_codes_and_descriptions.xlsx"
+
+codes_translated <-
+  map(
+    .x = excel_sheets(previously_translated_codes_file),
+    .f = ~read_excel(path = previously_translated_codes_file, sheet = .x)
+  ) %>% set_names(x = ., nm = excel_sheets(previously_translated_codes_file))
+```
+
+# First attempt - load codes as-is
+
+```{r}
+codes_translated$inclusions %>%
+  select(condition, icd10, comment_icd10) %>%
+  mutate(
+    icd10who = as.icd10who(icd10),
+    icd10cm = explain_code(icd10who)
+    )
+```
+
+
