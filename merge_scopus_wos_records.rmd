@@ -1,0 +1,143 @@
+---
+title: "Merge exported Scopus & Web of Science records"
+author: "Jan Savinc"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  pdf_document:
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+For the ICD code literature review, I performed a search on Scopus & Web of Science (WoS), resulting in 300-400 records each. To avoid duplicating the work of finding relevant records, this script will find records that appear in both sets and produce a merged set.
+
+```{r}
+library(tidyverse)
+library(openxlsx)
+```
+
+# Loading the files
+
+The Scopus file is in a much neater format, so we'll use this as the base file.
+
+We rename the WoS columns to match Scopus first.
+
+```{r}
+file_scopus <- read.csv("./lit_review_merge_records/scopus.csv", stringsAsFactors = FALSE, encoding="UTF-8") %>%
+  rename(Authors=X.U.FEFF.Authors)
+file_wos <- 
+  read.csv("./lit_review_merge_records/savedrecs.tsv", sep="\t", stringsAsFactors = FALSE, strip.white = TRUE, fileEncoding = "UTF-16LE", row.names=NULL) %>%
+  select(  # rename the relevant columns to Scopus columns, keeping only ones that are named below - the rest is a mess and not relevant
+    Authors=GP,
+    Title=CA,
+    Year=PD,
+    Source.title=TI,
+    DOI=AR,
+    Abstract=ID
+  ) %>%
+  mutate(Source="Web of Science")
+```
+
+The Scopus data has `r nrow(file_scopus)` records, and the Web of Science has `r nrow(file_wos)` records.
+
+# Merging the records
+
+Now we go through the records in the WoS file and check whether they are in the Scopus data. If they aren't they'll be added on to the final file.
+
+## First pass: remove identical titles
+
+```{r}
+dataToBeAddedToScopus <- file_wos %>%
+  filter(!Title %in% file_scopus$Title)
+```
+
+We now have `r nrow(dataToBeAddedToScopus)` records left in WoS.
+
+## Second pass: algorithm
+
+This is based on a simple algorithm copied from: https://github.com/christopherkullenberg/WoScop
+
+1. titles are converted to lower case
+2. all punctuation and whitespace are removed
+3. the first X characters of each thus geenrated string will be matched
+
+```{r}
+file_scopus$uniqueTitle <-
+   gsub(file_scopus$Title, pattern="[^A-Za-z0-9]+", replacement="") %>% tolower
+
+dataToBeAddedToScopus$uniqueTitle <-
+   gsub(dataToBeAddedToScopus$Title, pattern="[^A-Za-z0-9]+", replacement="") %>% tolower
+
+dataToBeAddedToScopus <-
+  dataToBeAddedToScopus %>%
+  filter(!uniqueTitle %in% file_scopus$uniqueTitle)
+```
+
+After applying the algorithm and removing the matches, we are left with `r nrow(dataToBeAddedToScopus)` records.
+
+## Third pass: approximate matching
+
+Now we use approximate (fuzzy) matching based on the algorithmically derived titles.
+
+```{r}
+foundFuzzyMatches <- tibble(
+  wos = dataToBeAddedToScopus$Title,
+  fuzzyMatches = sapply(
+    X = dataToBeAddedToScopus$uniqueTitle,
+    FUN = function(x) paste(file_scopus$Title[agrep(file_scopus$uniqueTitle,pattern = x)],collapse = "; "), USE.NAMES = FALSE
+  )
+) %>%
+  filter(!is.na(fuzzyMatches) & fuzzyMatches!="")
+
+foundFuzzyMatches
+```
+
+Only the three approxiamte matches displayed above were found, and on manual review the final two pairs are actual matches, but not the first pair.
+
+```{r}
+dataToBeAddedToScopus <-
+  dataToBeAddedToScopus %>%
+  filter(!Title %in% foundFuzzyMatches$wos[2:3])
+```
+
+This leaves us with `r nrow(dataToBeAddedToScopus)` most likely unique WoS records. They can now be merged with the Scopus records for manual review.
+
+# Merging data
+
+```{r}
+mergedData <-
+  bind_rows(
+    file_scopus,
+    dataToBeAddedToScopus
+  ) %>%
+  select(-uniqueTitle) %>%  # no longer needed
+  mutate(
+    DOI_link = ifelse(
+      !is.na(DOI) & DOI!="",
+      paste0("https://doi.org/",DOI),
+      NA
+    )
+  )
+
+class(mergedData$Link) <- "hyperlink"
+class(mergedData$DOI_link) <- "hyperlink"
+```
+
+We have a total of (most likely unique) `r nrow(mergedData)` records now, and we save them to an excel file for further processing.
+
+# Saving merged data
+
+The merged data will be save to file *merged_records_Scopus_WoS.xlsx*
+
+```{r}
+write.xlsx(x = list("merged Scopus,WoS"=mergedData), file="./lit_review_merge_records/merged_records_Scopus_WoS.xlsx")
+```
+
+
+
