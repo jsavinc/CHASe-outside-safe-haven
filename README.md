@@ -12,44 +12,45 @@ We compiled three lists of codes:
 
 All of the codes used in the project can be found in the `/processed_ICD_codes/` directory. There are several files, the most useful of which are probably the cross-mapped codes:
 
-*"Schnitzer" codes (indicative of maltreatment)*
+## "Schnitzer" codes (indicative of maltreatment)
 
 The files are organised according to the inclusion and exclusion policy used in the study [[4]](#4). An inclusion code had a corresponding upper age limit, with some inclusion codes only applying when the same hospital episode did not include any of the corresponding exclusion codes. There was one inclusion that needed at least one co-ocurring additional inclusion code from a list.
 
 Inclusion and exclusion codes are listed separately for ICD-9 and ICD-10, and each code has a corresponding **inclusion_index** or **exclusion_index** - this is an identifier that links the ICD-9 and ICD-10 versions of the same code:
 
-* `schnitzer_et_al_2011_empirical_inclusions_index_icd9.csv`
-* `schnitzer_et_al_2011_empirical_inclusions_index_icd10.csv`
 
-* `schnitzer_et_al_2011_empirical_exclusions_index_icd9.csv`
-* `schnitzer_et_al_2011_empirical_exclusions_index_icd10.csv`
+* [`schnitzer_et_al_2011_empirical_inclusions_index_icd9.csv`](processed_ICD_codes/schnitzer_et_al_2011_empirical_inclusions_index_icd9.csv)
+* [`schnitzer_et_al_2011_empirical_inclusions_index_icd10.csv`](processed_ICD_codes/schnitzer_et_al_2011_empirical_inclusions_index_icd10.csv)
 
-* `schnitzer_et_al_2011_empirical_index_map_inclusions_exclusions.csv` - in this fle the two identifiers are linked showing which exclusions apply to which inclusions. as well as identifying which codes require the additional inclusion codes to co-occur.
+* [`schnitzer_et_al_2011_empirical_exclusions_index_icd9.csv`](processed_ICD_codes/schnitzer_et_al_2011_empirical_exclusions_index_icd9.csv)
+* [`schnitzer_et_al_2011_empirical_exclusions_index_icd10.csv`](processed_ICD_codes/schnitzer_et_al_2011_empirical_exclusions_index_icd10.csv)
 
-* `schnitzer_et_al_2011_empirical_inclusions_age_index.csv` - this file lists the upper age limit for inclusion codes
-* `schnitzer_et_al_2011_empirical_inclusions_extra_requirements_index_icd10.csv` - this file lists the additional requirements for a particular inclusion code (only specified in ICD-10 because the relevant inclusion code originally specified in ICD-9-CM does not exist in ICD-9)
+* [`schnitzer_et_al_2011_empirical_index_map_inclusions_exclusions.csv`](processed_ICD_codes/schnitzer_et_al_2011_empirical_index_map_inclusions_exclusions.csv) - in this fle the two identifiers are linked showing which exclusions apply to which inclusions. as well as identifying which codes require the additional inclusion codes to co-occur.
+
+* [`schnitzer_et_al_2011_empirical_inclusions_age_index.csv`](processed_ICD_codes/schnitzer_et_al_2011_empirical_inclusions_age_index.csv) - this file lists the upper age limit for inclusion codes
+* [`schnitzer_et_al_2011_empirical_inclusions_extra_requirements_index_icd10.csv`](processed_ICD_codes/schnitzer_et_al_2011_empirical_inclusions_extra_requirements_index_icd10.csv) - this file lists the additional requirements for a particular inclusion code (only specified in ICD-10 because the relevant inclusion code originally specified in ICD-9-CM does not exist in ICD-9)
 
 *MVR codes*
 
-* `MVR_codes_long.csv` contains all MVR codes in ICD-9 and ICD-10 (merged between [[2]](#2) and [[3]](#3)) in long format, for use in the analysis.
+* [`MVR_codes_long.csv`](processed_ICD_codes/MVR_codes_long.csv) contains all MVR codes in ICD-9 and ICD-10 (merged between [[2]](#2) and [[3]](#3)) in long format, for use in the analysis.
 
 *CCS mental-health-related codes*
 
-* `ccs_categories_icd9.csv`
-* `ccs_categories_icd10.csv`
-* `ccs_category_labels.csv`
+* [`ccs_categories_icd9.csv`](processed_ICD_codes/ccs_categories_icd9.csv)
+* [`ccs_categories_icd10.csv`](processed_ICD_codes/ccs_categories_icd10.csv)
+* [`ccs_category_labels.csv`](processed_ICD_codes/ccs_category_labels.csv)
 
-The ICD-9 and ICD-10 files list one code per row, with its corresponding numeric category, which are listed in `ccs_category_labels.csv`.
+The ICD-9 and ICD-10 files list one code per row, with its corresponding numeric category, which are listed in [`ccs_category_labels.csv`](processed_ICD_codes/ccs_category_labels.csv).
 
 
 ## Other files
 
 Other files were produced for reporting purposes, some of which are:
 
-* `equivalent_chapters_icd_9_and_10.csv` lists equivalent ICD chapters between versions 9 and 10 (including both decimal and roman numeral chapter numbers)
-* `AGI_et_al_2010_ICD_codes.csv` contains the extracted ICD-9 and ICD-10 codes used in the González-Izquierdo, et al. (2010) [[2]](#2) paper, provided in spreadsheet format by González-Izquierdo.
-* `MVR_codes_expanded_for_age_check.csv` contains all MVR codes of the category *Adverse social circumstances* in ICD-9 and ICD-10 (merged between [[2]](#2) and [[3]](#3)), listed one code per line, with their corresponding meaning
-* `MVR_codes_merged_condensed_for_appendix.csv` contains all MVR codes in ICD-9 and ICD-10 (merged between [[2]](#2) and [[3]](#3)), condensed in a compact way for printing in an appendix to the paper.
+* [`equivalent_chapters_icd_9_and_10.csv`](processed_ICD_codes/equivalent_chapters_icd_9_and_10.csv) lists equivalent ICD chapters between versions 9 and 10 (including both decimal and roman numeral chapter numbers)
+* [`AGI_et_al_2010_ICD_codes.csv`](processed_ICD_codes/AGI_et_al_2010_ICD_codes.csv) contains the extracted ICD-9 and ICD-10 codes used in the González-Izquierdo, et al. (2010) [[2]](#2) paper, provided in spreadsheet format by González-Izquierdo.
+* [`MVR_codes_expanded_for_age_check.csv` ](processed_ICD_codes/MVR_codes_expanded_for_age_check.csv) contains all MVR codes of the category *Adverse social circumstances* in ICD-9 and ICD-10 (merged between [[2]](#2) and [[3]](#3)), listed one code per line, with their corresponding meaning
+* [`MVR_codes_merged_condensed_for_appendix.csv`](processed_ICD_codes/MVR_codes_merged_condensed_for_appendix.csv) contains all MVR codes in ICD-9 and ICD-10 (merged between [[2]](#2) and [[3]](#3)), condensed in a compact way for printing in an appendix to the paper.
 
 
 
