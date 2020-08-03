@@ -4,13 +4,15 @@ This is a repository of scripts used for the ICD-9-CM to ICD-9 and ICD-10 cross-
 
 We compiled three lists of codes: 
 
-1. the list of codes suggestive of neglect were cross-mapped from ICD-9-CM to ICD-9 and ICD-10 from the codes published by Schnitzer, et al. (2011) [[4]](#4); 
+1. a list of codes suggestive of neglect were cross-mapped from ICD-9-CM to ICD-9 and ICD-10 from the codes published by Schnitzer, et al. (2011) [[4]](#4); 
 2. a list of codes that were Maltreatment- or Violence-Related (MVR) - these were compiled from codes used in González-Izquierdo, et al. (2010) [[2]](#2), Gilbert, et al. (2012, supplementary files) [[3]](#3), and Schnitzer, et al. (2004) [[5]](#5).
 3. a cross-mapping of mental-health related ICD codes from ICD-9-CM and ICD-10-CM to ICD-9 and ICD-10, from the Clinical Classifications Software (CCS) published by AHRQ [[6]](#6)
 
+
 # Using the codes
 
-All of the codes used in the project can be found in the `/processed_ICD_codes/` directory. There are several files, the most useful of which are probably the cross-mapped codes:
+All of the codes produced for this project can be found in the [`/processed_ICD_codes/`](/processed_ICD_codes) sub-directory of this repository. There are several files, the most useful of which are probably the cross-mapped codes:
+
 
 ## "Schnitzer" codes (indicative of maltreatment)
 
@@ -30,11 +32,16 @@ Inclusion and exclusion codes are listed separately for ICD-9 and ICD-10, and ea
 * [`schnitzer_et_al_2011_empirical_inclusions_age_index.csv`](processed_ICD_codes/schnitzer_et_al_2011_empirical_inclusions_age_index.csv) - this file lists the upper age limit for inclusion codes
 * [`schnitzer_et_al_2011_empirical_inclusions_extra_requirements_index_icd10.csv`](processed_ICD_codes/schnitzer_et_al_2011_empirical_inclusions_extra_requirements_index_icd10.csv) - this file lists the additional requirements for a particular inclusion code (only specified in ICD-10 because the relevant inclusion code originally specified in ICD-9-CM does not exist in ICD-9)
 
-*MVR codes*
+
+A note on file naming: we've called the codes "empirical" inclusions or exclusions because they are based on the codes reported by Schnitzer, et al. [[4]](#4) after they reviewed the cases and confirmed which codes were found using their criteria. There is a longer, "a-priori" list of codes indicative of maltreatment published in the same study, but not all of those codes were found in the case notes they reviewed.
+
+
+## MVR codes
 
 * [`MVR_codes_long.csv`](processed_ICD_codes/MVR_codes_long.csv) contains all MVR codes in ICD-9 and ICD-10 (merged between [[2]](#2) and [[3]](#3)) in long format, for use in the analysis.
 
-*CCS mental-health-related codes*
+
+## CCS mental-health-related codes
 
 * [`ccs_categories_icd9.csv`](processed_ICD_codes/ccs_categories_icd9.csv)
 * [`ccs_categories_icd10.csv`](processed_ICD_codes/ccs_categories_icd10.csv)
