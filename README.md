@@ -35,7 +35,10 @@ Inclusion and exclusion codes are listed separately for ICD-9 and ICD-10, and ea
 
 A note on file naming: we've called the codes "empirical" inclusions or exclusions because they are based on the codes reported by Schnitzer, et al. [[4]](#4) after they reviewed the cases and confirmed which codes were found using their criteria. There is a longer, "a-priori" list of codes indicative of maltreatment published in the same study, but not all of those codes were found in the case notes they reviewed.
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 324fc40a8fb5d94295f990cd88656b6fe5afa590
 ## MVR codes
 
 * [`MVR_codes_long.csv`](processed_ICD_codes/MVR_codes_long.csv) contains all MVR codes in ICD-9 and ICD-10 (merged between [[2]](#2) and [[3]](#3)) in long format, for use in the analysis.
