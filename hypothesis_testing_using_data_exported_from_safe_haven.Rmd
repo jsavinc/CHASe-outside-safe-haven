@@ -1,0 +1,161 @@
+---
+title: CHASe Hypothesis testing using data exported from Safe Haven
+author: "Jan Savinc"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+  toc: true
+toc_float: true
+code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Libraries
+
+```{r, warning=FALSE}
+library(tidyverse)
+library(knitr)  # for showing tables inside rmarkdown
+library(readxl)  # read excel files
+library(broom)
+```
+
+# Load data
+
+```{r}
+consort_data <- 
+  read_csv(file = "../Safe Haven Exports/CONSORT_diagram_data.csv") %>%
+  mutate(
+    note = case_when(
+      note == "Excluded: cases with no hospital records prior to death before age 18" &
+        N > 1000 ~ "Excluded: controls with no hospital records prior to death before age 18",
+      TRUE ~ note
+    )
+  )  # correction: instead of 'cases' it should be 'controls' at the entry for exclusions with no records prior to death or age 18 with N>1000
+
+data_cohort_by_whether_they_had_records_prior_to_death <- read_excel(
+  path = "X:/R1369/CSO FULL grant/Safe Haven Exports/Descriptive summary of cohort & individuals with any records/Descriptive_summary_cohort_by_whether_they_had_any_records_prior_to_death.xlsx",
+  sheet = 1, 
+  ) %>%
+  slice(-13)  # remove footnote entry in spreadsheet
+
+hypothesis_tests <- list()  # empty list for storing hypothesis tests!
+```
+
+
+## Hypothesis: the proportion of males is higher in the suicide group with hospital records than in the control group with hospital records
+
+
+```{r}
+table_cohort_sex_has_any_records_prior_to_death <-
+  data_cohort_by_whether_they_had_records_prior_to_death %>%
+  select(case, sex, has_no_records_prior_to_death, N)
+
+## print the table first so we see the data we're working with
+table_cohort_sex_has_any_records_prior_to_death %>%
+  filter(sex!="both" & has_no_records_prior_to_death=="No") %>%
+  group_by(case) %>%
+  mutate(percent = scales::percent(N/sum(N), accuracy = 0.1)) %>%
+  ungroup %>%
+  kable(caption = "Number of individuals with records prior to death by sex & case/control.")
+
+## the proportions look very similar
+table_cohort_sex_has_any_records_prior_to_death %>%
+  filter(sex!="both" & has_no_records_prior_to_death=="No") %>%
+  uncount(N) %>%
+  {table(.$case, .$sex)} %>%
+  chisq.test()
+```
+
+
+## Hypothesis: the average age of death is different for suicide cases with no prior records to those with prior records
+
+```{r}
+mean_cases_with_records <- data_cohort_by_whether_they_had_records_prior_to_death %>% filter(case=="case" & sex=="both" & has_no_records_prior_to_death=="No") %>% .$mean_age
+mean_cases_without_records <- data_cohort_by_whether_they_had_records_prior_to_death %>% filter(case=="case" & sex=="both" & has_no_records_prior_to_death=="Yes") %>% .$mean_age
+
+sd_cases_with_records <- data_cohort_by_whether_they_had_records_prior_to_death %>% filter(case=="case" & sex=="both" & has_no_records_prior_to_death=="No") %>% .$sd_age
+sd_cases_without_records <- data_cohort_by_whether_they_had_records_prior_to_death %>% filter(case=="case" & sex=="both" & has_no_records_prior_to_death=="Yes") %>% .$sd_age
+
+n_cases_with_records <- data_cohort_by_whether_they_had_records_prior_to_death %>% filter(case=="case" & sex=="both" & has_no_records_prior_to_death=="No") %>% .$N
+n_cases_without_records <- data_cohort_by_whether_they_had_records_prior_to_death %>% filter(case=="case" & sex=="both" & has_no_records_prior_to_death=="Yes") %>% .$N
+
+## t test using statistics rather than raw data
+
+hypothesis_tests$t_test_age_difference_cases_with_and_without_records <- 
+  BSDA::tsum.test(
+    mean.x = mean_cases_with_records,
+    s.x = sd_cases_with_records,
+    n.x = n_cases_with_records,
+    mean.y = mean_cases_without_records,
+    s.y = sd_cases_without_records,
+    n.y = n_cases_without_records,
+    var.equal = FALSE
+  ) %>% tidy
+
+hypothesis_tests$t_test_age_difference_cases_with_and_without_records %>%
+  kable(caption = "t-test of age difference between cases with records and cases without records", format.args = list(nsmall=4))
+```
+
+## Hypotheses: gender differences between characteristics of cases & controls, separately for individuals with records or no records
+
+```{r}
+# quantities_to_test_with_t_test <- c("age","carstairs","urban_rural")
+# quantities_to_test_with_chisq_test <- c("proportion_not_in_work")
+
+long_data_cohort_by_whether_they_had_records_prior_to_death_for_t_tests <- 
+  data_cohort_by_whether_they_had_records_prior_to_death %>%
+  filter(sex != "both") %>%
+  mutate(n_age = N, n_carstairs = N, n_urban_rural = N) %>%
+  select(-matches("median|iqr|q1|q3|proportion"), -N) %>%
+  pivot_longer(cols = matches("age|carstairs|urban_rural"), names_to = c("statistic","variable"), values_to = "value", names_pattern = "(mean|sd|n)_(.*)")
+
+hypothesis_tests$t_tests_sex_differences <-
+  long_data_cohort_by_whether_they_had_records_prior_to_death_for_t_tests %>%
+  group_by(case, has_no_records_prior_to_death, variable) %>%
+  pivot_wider(names_from = c("sex","statistic"), values_from = "value") %>%
+  summarise(
+    BSDA::tsum.test(
+      mean.x = female_mean,
+      s.x = female_sd,
+      n.x = female_n,
+      mean.y = male_mean,
+      s.y = male_sd,
+      n.y = male_n,
+      var.equal = FALSE
+      ) %>% tidy, 
+    .groups = "drop"
+    )
+
+hypothesis_tests$prop_tests_sex_differences <-
+  data_cohort_by_whether_they_had_records_prior_to_death %>%
+  filter(sex != "both") %>%
+  filter(!is.na(proportion_not_in_work)) %>%
+  select(case, sex, has_no_records_prior_to_death, N, proportion_not_in_work) %>%
+  mutate(n_success = round(N * proportion_not_in_work), n_fail = N-n_success) %>%
+  select(-N, -proportion_not_in_work) %>%
+  pivot_longer(cols=c(n_success,n_fail), names_to="outcome", values_to="n", names_pattern="n_(.*)") %>%
+  uncount(n) %>%
+  group_by(case, sex, has_no_records_prior_to_death) %>%
+  summarise(
+    prop.test(table(outcome)) %>% tidy,
+    .groups = "drop"
+  )
+```
+
+### Display results
+
+```{r}
+hypothesis_tests$t_tests_sex_differences %>%
+  filter(p.value < .05) %>%
+  kable(caption = "t-tests of sex difference at p < .05", format.args = list(nsmall=4))
+
+hypothesis_tests$prop_tests_sex_differences %>%
+  filter(p.value < .05) %>%
+  kable(caption = "Fisher's z-tests of sex difference at p < .05", format.args = list(nsmall=4))
+```
+
