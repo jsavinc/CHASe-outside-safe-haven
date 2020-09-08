@@ -60,30 +60,30 @@ consort_diagram <-
     
     cases_1[label = 'Deaths by suicide \\'cases\\'\\n1991 to 2017, aged 10 to 34\\nn={numbers$extracted_cases_individuals_who_died_by_suicide_aged_1034_1981_to_2017}']
     cases_1_excluded[label = 'Exclusions:\\nborn before 1981\\nn={numbers$excluded_cases_born_before_1981}']
-    cases_1_blank[label = '', width = 0.01, height = 0.01]
+    cases_1_blank[shape = point, label = '', width = 0.01, height = 0.01]
     
     cases_2[label = 'Born 1981 or later\\nn={numbers$cases_born_1981_or_later}']
     cases_2_excluded[label = 'No hospital records prior to death\\nn={numbers$excluded_cases_with_no_hospital_records_or_only_hospital_record_was_related_to_death}']
-    cases_2_blank[label = '', width = 0.01, height = 0.01]
+    cases_2_blank[shape = point, label = '', width = 0.01, height = 0.01]
     
     cases_3[label = 'Any hospital records prior to death\\nn={numbers$cases_with_hospital_records_prior_to_death}']
     cases_3_excluded[label = 'No hospital records prior to age 18 or prior to death\\nn={numbers$excluded_cases_with_no_hospital_records_prior_to_death_before_age_18}']
-    cases_3_blank[label = '', width = 0.01, height = 0.01]
+    cases_3_blank[shape = point, label = '', width = 0.01, height = 0.01]
     
     cases_4[label = 'Any hospital records prior to age 18 & prior to death\\nn={numbers$cases_with_hospital_records_prior_to_death_and_prior_to_age_18}']
     
     
     controls_1[label = 'Random sample non-suicide \\'controls\\'\\nn={numbers$random_sample_nonsuicide_controls_matched_to_cases}, ratio 1:10']
     controls_1_excluded[label = 'Exclusions:\\nlinked to cases born before 1981\\nn={numbers$excluded_controls_matched_to_cases_born_before_1981}']
-    controls_1_blank[label = '', width = 0.01, height = 0.01]
+    controls_1_blank[shape = point, label = '', width = 0.01, height = 0.01]
     
     controls_2[label = 'Linked to cases born 1981 or later\\nn={numbers$controls_matched_to_cases_born_1981_or_later}']
     controls_2_excluded[label = 'No hospital records prior to death\\nn={numbers$excluded_controls_with_no_hospital_records_or_only_hospital_record_was_related_to_death}']
-    controls_2_blank[label = '', width = 0.01, height = 0.01]
+    controls_2_blank[shape = point, label = '', width = 0.01, height = 0.01]
     
     controls_3[label = 'Any hospital records prior to death\\nn={numbers$controls_with_hospital_records_prior_to_death}']
     controls_3_excluded[label = 'No hospital records prior to age 18 or prior to death\\nn={numbers$excluded_controls_with_no_hospital_records_prior_to_death_before_age_18}']
-    controls_3_blank[label = '', width = 0.01, height = 0.01]
+    controls_3_blank[shape = point, label = '', width = 0.01, height = 0.01]
     
     controls_4[label = 'Any hospital records prior to age 18 & prior to death\\nn={numbers$controls_with_hospital_records_prior_to_death_and_prior_to_age_18}']
     
