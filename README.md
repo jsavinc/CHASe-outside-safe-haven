@@ -49,6 +49,12 @@ A note on file naming: we've called the codes "empirical" inclusions or exclusio
 
 The ICD-9 and ICD-10 files list one code per row, with its corresponding numeric category, which are listed in [`ccs_category_labels.csv`](processed_ICD_codes/ccs_category_labels.csv).
 
+## Suicide methods
+
+Table of categorised suicide methods across ICD-9 and ICD-10 and intentional and undetermined intent external cause codes. These were based on the categories used by the [Manitoba Centre for Health Policy](http://mchp-appserv.cpe.umanitoba.ca/viewConcept.php?conceptID=1183)
+
+* [`table_suicide_method_equivalence.csv`](table_suicide_methods/table_suicide_method_equivalence.csv)
+* [`table_suicide_method_equivalence_long.csv`  - long format for programming with](table_suicide_methods/table_suicide_method_equivalence_long.csv)
 
 ## Other files
 
