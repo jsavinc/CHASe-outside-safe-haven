@@ -1,0 +1,12 @@
+method,codes_intentional,codes_undetermined_intent
+poisoning,"E950-E952, X60-X69","E980-E982, Y10-Y19"
+"hanging, strangulation and suffocation","E953, X70","E983, Y20"
+drowning,"E954, X71","E984, Y21"
+firearms and explosives,"E955, X72-X75","E985, Y22-Y25"
+"smoke, fire, flames, steam, hot vapours and hot objects","E958.1, E958.2, X76, X77","E988.1, E988.2, Y26, Y27"
+cutting and piercing instruments or blunt objects,"E956, X78, X79","E986, Y28, Y29"
+jumping from high places,"E957, X80","E987, Y30"
+jumping or lying before a moving object,"E958.0, X81","E988.0, Y31"
+crashing of motor vehicle,"E958.5, X82","E988.5, Y32"
+other and unspecified means,"E958.3, E958.4, E958.6, E958.7, E958.9, X83, X84","E988.3, E988.4, E988.6, E988.7, E988.9, Y33, Y34"
+sequelae,"E959, Y87.0","E989, Y87.2"

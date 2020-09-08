@@ -1,0 +1,89 @@
+method,intent,code,icd_version,code_decimal
+poisoning,intentional,E950,9,E950
+poisoning,intentional,E951,9,E951
+poisoning,intentional,E952,9,E952
+poisoning,intentional,X60,10,X60
+poisoning,intentional,X61,10,X61
+poisoning,intentional,X62,10,X62
+poisoning,intentional,X63,10,X63
+poisoning,intentional,X64,10,X64
+poisoning,intentional,X65,10,X65
+poisoning,intentional,X66,10,X66
+poisoning,intentional,X67,10,X67
+poisoning,intentional,X68,10,X68
+poisoning,intentional,X69,10,X69
+poisoning,undetermined_intent,E980,9,E980
+poisoning,undetermined_intent,E981,9,E981
+poisoning,undetermined_intent,E982,9,E982
+poisoning,undetermined_intent,Y10,10,Y10
+poisoning,undetermined_intent,Y11,10,Y11
+poisoning,undetermined_intent,Y12,10,Y12
+poisoning,undetermined_intent,Y13,10,Y13
+poisoning,undetermined_intent,Y14,10,Y14
+poisoning,undetermined_intent,Y15,10,Y15
+poisoning,undetermined_intent,Y16,10,Y16
+poisoning,undetermined_intent,Y17,10,Y17
+poisoning,undetermined_intent,Y18,10,Y18
+poisoning,undetermined_intent,Y19,10,Y19
+"hanging, strangulation and suffocation",intentional,E953,9,E953
+"hanging, strangulation and suffocation",intentional,X70,10,X70
+"hanging, strangulation and suffocation",undetermined_intent,E983,9,E983
+"hanging, strangulation and suffocation",undetermined_intent,Y20,10,Y20
+drowning,intentional,E954,9,E954
+drowning,intentional,X71,10,X71
+drowning,undetermined_intent,E984,9,E984
+drowning,undetermined_intent,Y21,10,Y21
+firearms and explosives,intentional,E955,9,E955
+firearms and explosives,intentional,X72,10,X72
+firearms and explosives,intentional,X73,10,X73
+firearms and explosives,intentional,X74,10,X74
+firearms and explosives,intentional,X75,10,X75
+firearms and explosives,undetermined_intent,E985,9,E985
+firearms and explosives,undetermined_intent,Y22,10,Y22
+firearms and explosives,undetermined_intent,Y23,10,Y23
+firearms and explosives,undetermined_intent,Y24,10,Y24
+firearms and explosives,undetermined_intent,Y25,10,Y25
+"smoke, fire, flames, steam, hot vapours and hot objects",intentional,E9581,9,E958.1
+"smoke, fire, flames, steam, hot vapours and hot objects",intentional,E9582,9,E958.2
+"smoke, fire, flames, steam, hot vapours and hot objects",intentional,X76,10,X76
+"smoke, fire, flames, steam, hot vapours and hot objects",intentional,X77,10,X77
+"smoke, fire, flames, steam, hot vapours and hot objects",undetermined_intent,E9881,9,E988.1
+"smoke, fire, flames, steam, hot vapours and hot objects",undetermined_intent,E9882,9,E988.2
+"smoke, fire, flames, steam, hot vapours and hot objects",undetermined_intent,Y26,10,Y26
+"smoke, fire, flames, steam, hot vapours and hot objects",undetermined_intent,Y27,10,Y27
+cutting and piercing instruments or blunt objects,intentional,E956,9,E956
+cutting and piercing instruments or blunt objects,intentional,X78,10,X78
+cutting and piercing instruments or blunt objects,intentional,X79,10,X79
+cutting and piercing instruments or blunt objects,undetermined_intent,E986,9,E986
+cutting and piercing instruments or blunt objects,undetermined_intent,Y28,10,Y28
+cutting and piercing instruments or blunt objects,undetermined_intent,Y29,10,Y29
+jumping from high places,intentional,E957,9,E957
+jumping from high places,intentional,X80,10,X80
+jumping from high places,undetermined_intent,E987,9,E987
+jumping from high places,undetermined_intent,Y30,10,Y30
+jumping or lying before a moving object,intentional,E9580,9,E958.0
+jumping or lying before a moving object,intentional,X81,10,X81
+jumping or lying before a moving object,undetermined_intent,E9880,9,E988.0
+jumping or lying before a moving object,undetermined_intent,Y31,10,Y31
+crashing of motor vehicle,intentional,E9585,9,E958.5
+crashing of motor vehicle,intentional,X82,10,X82
+crashing of motor vehicle,undetermined_intent,E9885,9,E988.5
+crashing of motor vehicle,undetermined_intent,Y32,10,Y32
+other and unspecified means,intentional,E9583,9,E958.3
+other and unspecified means,intentional,E9584,9,E958.4
+other and unspecified means,intentional,E9586,9,E958.6
+other and unspecified means,intentional,E9587,9,E958.7
+other and unspecified means,intentional,E9589,9,E958.9
+other and unspecified means,intentional,X83,10,X83
+other and unspecified means,intentional,X84,10,X84
+other and unspecified means,undetermined_intent,E9883,9,E988.3
+other and unspecified means,undetermined_intent,E9884,9,E988.4
+other and unspecified means,undetermined_intent,E9886,9,E988.6
+other and unspecified means,undetermined_intent,E9887,9,E988.7
+other and unspecified means,undetermined_intent,E9889,9,E988.9
+other and unspecified means,undetermined_intent,Y33,10,Y33
+other and unspecified means,undetermined_intent,Y34,10,Y34
+sequelae,intentional,E959,9,E959
+sequelae,intentional,Y870,10,Y87.0
+sequelae,undetermined_intent,E989,9,E989
+sequelae,undetermined_intent,Y872,10,Y87.2

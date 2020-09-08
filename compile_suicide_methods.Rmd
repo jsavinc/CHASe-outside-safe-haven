@@ -1,0 +1,129 @@
+---
+title: Compile equivalence table for suicide methods in ICD-9 and ICD-10 (intentional
+  & undetermined intent)
+author: "Jan Savinc"
+date: "04/09/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+# Introduction
+
+For compiling suicide statistics, we conventionally include external cause codes both for intentional self-injury and for undetermined intent. In order to group longitudinal results, we need to compile equivalent codes in ICD-9 and ICD-10, and equivalent methods of injury between intentional and undetermined intent codes.
+
+The codes include:
+
+* intentional self-harm (ICD-9 codes E950-959; ICD-10 codes X60-X84 plus
+Y87.0 (sequelae of)
+* events of undetermined intent (ICD-9 codes E980-989; ICD-10 codes Y10-
+Y34 plus Y87.2 (sequelae of)
+
+Of those, ICD-10 codes X60-X84 map one-to-one to codes Y10-Y34 in terms of cause or means of injury; ICD-9 codes E950-E959 map onto E980-E989.
+The same is true for Y87.0, Y87.2, and E959 & E989 (sequelae of self-harm or undetermined intent)
+
+The trickier task is to map ICD-9 codes onto ICD-10 codes - whereas ICD-10 codes are more spread-out, and in death records mostly (potentially always) appear as 3-character codes, ICD-9 codes use 4-th digit distinctions.
+
+For example, self-poisonings are X60-X69 in ICD-10, whereas in ICD-9 self-poisonings are in the range E950-E952.
+
+# Reusing previous groupings
+
+The grouping provided by the [http://mchp-appserv.cpe.umanitoba.ca/viewConcept.php?conceptID=1183](Manitoba Centre for Health Policy):
+
+* poisoning with undetermined intent: ICD-10 codes Y10-Y12, Y16, Y17
+* self-inflicted poisoning: ICD-9 codes E950-E952, ICD-10 codes X60-X69
+* self-inflicted injury by hanging, strangulation and suffocation: ICD-9 code E953, ICD-10 code X70
+* self-inflicted injury by drowning: ICD-9 code E954, ICD-10 code X71
+* self-inflicted injury by firearms and explosives: ICD-9 code E955, ICD-10 codes X72-X75
+* self-inflicted injury by smoke, fire, flames, steam, hot vapours and hot objects: ICD-9 codes E958.1, E958.2; ICD-10 codes X76, X77
+* self-inflicted injury by cutting and piecing instruments: ICD-9 code E956; ICD-10 codes X78, X79
+* self-inflicted injury by jumping from high places: ICD-9 code E957, ICD-10 code X80
+* self-inflicted injury by jumping or lying before a moving object: ICD-9 code E958.0, ICD-10 code X81
+* self-inflicted injury by crashing of motor vehicle: ICD-9 code E958.5, ICD-10-CA code X82
+* self-inflicted injury by other and unspecified means: ICD-9 codes E958.3, E958.4, E958.6-E958.9; ICD-10 codes X83, X84
+* late effects of self-inflicted injury: ICD-9 code E959
+
+To the above we can add late effects of self-inflicted injury in ICD-10: Y87.0, and remove the accidental poisonings!
+
+## Compiling equivalent codes
+
+```{r}
+table_suicide_method_equivalence <- tribble(
+  ~method, ~codes_intentional, ~codes_undetermined_intent,
+  "poisoning", "E950-E952, X60-X69", "E980-E982, Y10-Y19", 
+  "hanging, strangulation and suffocation", "E953, X70", "E983, Y20",
+  "drowning", "E954, X71", "E984, Y21",
+  "firearms and explosives", "E955, X72-X75", "E985, Y22-Y25",
+  "smoke, fire, flames, steam, hot vapours and hot objects", "E958.1, E958.2, X76, X77", "E988.1, E988.2, Y26, Y27",
+  "cutting and piercing instruments or blunt objects", "E956, X78, X79", "E986, Y28, Y29",
+  "jumping from high places", "E957, X80", "E987, Y30",
+  "jumping or lying before a moving object", "E958.0, X81", "E988.0, Y31",
+  "crashing of motor vehicle", "E958.5, X82", "E988.5, Y32",
+  "other and unspecified means", "E958.3, E958.4, E958.6, E958.7, E958.9, X83, X84", "E988.3, E988.4, E988.6, E988.7, E988.9, Y33, Y34",
+  "sequelae", "E959, Y87.0", "E989, Y87.2"
+)
+
+if(!dir.exists("./table_suicide_methods")) dir.create("./table_suicide_methods")
+
+write_csv(x = table_suicide_method_equivalence, path = "./table_suicide_methods/table_suicide_method_equivalence.csv")
+
+convert_range_to_csv <- function(range_maybe_containing_dash) {
+  if(!str_detect(range_maybe_containing_dash, pattern = "-")) return(range_maybe_containing_dash)
+  first_char <- str_sub(range_maybe_containing_dash,1,1)
+  numeric_range <-
+    str_split(range_maybe_containing_dash, pattern = "-") %>% 
+    unlist %>% 
+    parse_number %>%
+    {seq(from=.[1], to=.[2])}
+  comma_separated_values <-
+    paste0(first_char,numeric_range,collapse=",")
+  return(comma_separated_values)
+}
+
+long_format_table_suicide_method_equivalence <-
+  table_suicide_method_equivalence %>%
+  pivot_longer(cols=c(codes_intentional,codes_undetermined_intent), names_to="intent", values_to="codes") %>%
+  separate_rows(codes, sep=", ") %>%
+  group_by(1:nrow(.)) %>%
+  mutate(codes = convert_range_to_csv(codes)) %>%
+  ungroup %>%
+  separate_rows(codes, sep=",") %>%
+  select(method, intent, code=codes) %>%
+  mutate(
+    intent = str_replace(string = intent, pattern = "codes\\_", replacement = ""),
+    icd_version = if_else(condition = str_starts(string = code, pattern = "E"), true = 9, false = 10),
+    code_decimal = code,
+    code = str_replace(string = code, pattern = "\\.", replacement = "")
+    ) %>%
+  distinct
+
+write_csv(x = long_format_table_suicide_method_equivalence, path = "./table_suicide_methods/table_suicide_method_equivalence_long.csv")
+```
+
+
+# Manual mapping
+
+* ICD-10 X60 Intentional self-poisoning by and exposure to nonopioid analgesics, antipyretics and antirheumatics
+* ICD-9 E950.0 Suicide and self-inflicted poisoning by analgesics, antipyretics, and antirheumatics
+
+
+* X61 Intentional self-poisoning by and exposure to antiepileptic, sedative-hypnotic, antiparkinsonism and psychotropic drugs, not elsewhere classified
+* E950.1 Suicide and self-inflicted poisoning by barbiturates
+* E950.2 Suicide and self-inflicted poisoning by other sedatives and hypnotics
+
+* X62 Intentional self-poisoning by and exposure to narcotics and psychodysleptics [hallucinogens], not elsewhere classified
+* E950.3 Suicide and self-inflicted poisoning by tranquilizers and other psychotropic agents
+
+* X63 Intentional self-poisoning by and exposure to other drugs acting on the autonomic nervous system
+* ???
+
+This is where it gets tricky - it's unclear which drugs in ICD-9 fall into "Other" and which don't!
