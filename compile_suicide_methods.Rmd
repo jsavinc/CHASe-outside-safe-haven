@@ -68,7 +68,7 @@ table_suicide_method_equivalence <- tribble(
   "jumping from high places", "E957, X80", "E987, Y30",
   "jumping or lying before a moving object", "E958.0, X81", "E988.0, Y31",
   "crashing of motor vehicle", "E958.5, X82", "E988.5, Y32",
-  "other and unspecified means", "E958.3, E958.4, E958.6, E958.7, E958.9, X83, X84", "E988.3, E988.4, E988.6, E988.7, E988.9, Y33, Y34",
+  "other and unspecified means", "E958.3, E958.4, E958.6, E958.7, E958.8, E958.9, X83, X84", "E988.3, E988.4, E988.6, E988.7, E988.9, Y33, Y34",
   "sequelae", "E959, Y87.0", "E989, Y87.2"
 )
 
