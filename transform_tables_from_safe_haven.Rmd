@@ -129,6 +129,9 @@ tables <-
       ) %>%
       set_names(., nm = c("ccs_main_and_other_diag", "ccs_main_diag_only"))
 )
+
+tables$poisonings_and_sh <-
+  read_excel(path = "../Safe Haven Exports/ResultsResults_paper_1_tables_2020_07_30/Frequency_table_poisonings_and_self_harm.xlsx", sheet = 1) %>% slice(-nrow(.))  # remove last row, it's the caption
 ```
 
 
@@ -160,8 +163,8 @@ tables_long[c("mh_main_and_other_diag", "mh_main_diag_only")] <- tables[c("mh_ma
 tables_long[c("icd_main_and_other_diag", "icd_main_diag_only")] <- tables[c("icd_main_and_other_diag", "icd_main_diag_only")]
 
 ## no converting needed for these
-tables_long[c("ccs_main_and_other_diag", "ccs_main_diag_only")] <-
-  tables[c("ccs_main_and_other_diag", "ccs_main_diag_only")]
+tables_long[c("ccs_main_and_other_diag", "ccs_main_diag_only", "poisonings_and_sh")] <-
+  tables[c("ccs_main_and_other_diag", "ccs_main_diag_only", "poisonings_and_sh")]
 ```
 
 
@@ -259,6 +262,12 @@ transformed$ccs_main_and_other_diag_over_18s <-
   pivot_wider(names_from=c("case","sex"), values_from="n_prop") %>%
   # filter(!str_detect(ccs_category_description, "Adjustment|Impulse|Delirium|Screening|Personality|Schizophrenia|usually diagnosed|Developmental")) %>%
   rename("CCS Category"=ccs_category_description)
+
+transformed$poisonings_and_sh <-
+  tables_long$poisonings_and_sh %>%
+  filter(age_group == "<18" & criterion == "Poisoning (960-979, T36-T50)") %>%
+  select(case, sex, n_prop, Diagnosis = criterion) %>%
+  pivot_wider(names_from=c("case","sex"), values_from="n_prop")
 ```
 
 ## Recalculating adversity tables
@@ -413,6 +422,10 @@ write.xlsx(x = table_icd, file = "../Publications/Results paper 1/Table_ICD_chap
 write.xlsx(x = transformed$ccs_main_and_other_diag, file = "../Publications/Results paper 1/Table_CCS_diagnoses_main_or_other.xlsx")
 
 write.xlsx(x = transformed$ccs_main_and_other_diag_over_18s, file = "../Publications/Results paper 1/Table_CCS_diagnoses_main_or_other_over_18s.xlsx")
+
+write.xlsx(x = transformed$poisonings_and_sh, file = "../Publications/Results paper 1/Table_poisonings_incl_death_episodes_under_18s.xlsx")
+
+
 ```
 
 # Recalculating counts across age/gender
