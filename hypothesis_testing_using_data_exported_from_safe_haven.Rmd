@@ -84,18 +84,35 @@ sd_cases_without_records <- data_cohort_by_whether_they_had_records_prior_to_dea
 n_cases_with_records <- data_cohort_by_whether_they_had_records_prior_to_death %>% filter(case=="case" & sex=="both" & has_no_records_prior_to_death=="No") %>% .$N
 n_cases_without_records <- data_cohort_by_whether_they_had_records_prior_to_death %>% filter(case=="case" & sex=="both" & has_no_records_prior_to_death=="Yes") %>% .$N
 
-## t test using statistics rather than raw data
+## convert table to a format of one entry per row
+age_at_death_tbl <-
+  data_cohort_by_whether_they_had_records_prior_to_death %>%
+  filter(!is.na(mean_age)) %>%
+  select(case, sex, has_no_records_prior_to_death, N, mean_age, sd_age) %>%
+  mutate(has_no_records_prior_to_death = if_else(has_no_records_prior_to_death=="Yes", "no_records", "had_records")) %>%
+  pivot_wider(values_from = c(N, mean_age, sd_age), names_from = has_no_records_prior_to_death)
 
-hypothesis_tests$t_test_age_difference_cases_with_and_without_records <- 
-  BSDA::tsum.test(
-    mean.x = mean_cases_with_records,
-    s.x = sd_cases_with_records,
-    n.x = n_cases_with_records,
-    mean.y = mean_cases_without_records,
-    s.y = sd_cases_without_records,
-    n.y = n_cases_without_records,
-    var.equal = FALSE
-  ) %>% tidy
+## t test using statistics rather than raw data
+hypothesis_tests$t_test_age_difference_cases_with_and_without_records <-
+  age_at_death_tbl %>%
+  group_by(case, sex) %>%
+  summarise(
+    tidy(BSDA::tsum.test(
+      mean.x = mean_age_had_records,
+      s.x = sd_age_had_records,
+      n.x = N_had_records,
+      mean.y = mean_age_no_records,
+      s.y = sd_age_no_records,
+      n.y = N_no_records,
+      var.equal = FALSE
+    )),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    difference = estimate1 - estimate2,
+    meaning = "1 = had records, 2 = no records"
+    ) %>%
+  relocate(difference, .before=statistic)
 
 hypothesis_tests$t_test_age_difference_cases_with_and_without_records %>%
   kable(caption = "t-test of age difference between cases with records and cases without records", format.args = list(nsmall=4))
