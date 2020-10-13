@@ -111,6 +111,27 @@ consort_data <-
       TRUE ~ note
     )
   )  # correction: instead of 'cases' it should be 'controls' at the entry for exclusions with no records prior to death or age 18 with N>1000
+
+
+tables <-
+  c(tables,
+    map(
+      .x = c(
+        "CCS categories, any position",
+        "CCS, main diagnosis only"
+      ),
+      .f = 
+        ~read_excel(
+              path = "../Safe Haven Exports/ResultsResults_paper_1_tables_2020_07_30/Frequency_table_ccs_categories.xlsx", 
+              sheet = .x
+              ) %>%
+            slice(-nrow(.))  # remove last row, it's the caption
+      ) %>%
+      set_names(., nm = c("ccs_main_and_other_diag", "ccs_main_diag_only"))
+)
+
+tables$poisonings_and_sh <-
+  read_excel(path = "../Safe Haven Exports/ResultsResults_paper_1_tables_2020_07_30/Frequency_table_poisonings_and_self_harm.xlsx", sheet = 1) %>% slice(-nrow(.))  # remove last row, it's the caption
 ```
 
 
@@ -135,11 +156,15 @@ tables_long[c("mvr", "schnitzer", "mother_died")] <- map(
     )  
 )
 
+## no converting needed for these
 tables_long[c("mh_main_and_other_diag", "mh_main_diag_only")] <- tables[c("mh_main_and_other_diag", "mh_main_diag_only")]
 
+## no converting needed for these
 tables_long[c("icd_main_and_other_diag", "icd_main_diag_only")] <- tables[c("icd_main_and_other_diag", "icd_main_diag_only")]
 
-
+## no converting needed for these
+tables_long[c("ccs_main_and_other_diag", "ccs_main_diag_only", "poisonings_and_sh")] <-
+  tables[c("ccs_main_and_other_diag", "ccs_main_diag_only", "poisonings_and_sh")]
 ```
 
 
@@ -206,7 +231,6 @@ transformed$icd_main_and_other_diag <-
   select(case, sex, chapter_equivalent, n_prop) %>%
   pivot_wider(names_from=c("case","sex"), values_from="n_prop") %>%
   arrange(chapter_equivalent=factor(chapter_equivalent, levels=order_icd_chapters))
-  
 
 table_icd <-
   full_join(
@@ -214,6 +238,36 @@ table_icd <-
     transformed$icd_main_and_other_diag %>% rename_at(vars(matches("both")), ~paste0(.,"_any_diag")),
     by = "chapter_equivalent"
   )
+
+## Main diag CCS not very interesting - cases have higher numbers, but difficult to compare due to ocntrols haveing extremely low numbers
+transformed$ccs_main_diag <-
+  tables$ccs_main_diag_only %>%
+  filter(age_group == "<18") %>%
+  select(case, sex, ccs_category_description, n_prop) %>%
+  pivot_wider(names_from=c("case","sex"), values_from="n_prop")
+  
+
+transformed$ccs_main_and_other_diag <-
+  tables$ccs_main_and_other_diag %>%
+  filter(age_group == "<18") %>%
+  select(case, sex, ccs_category_description, n_prop) %>%
+  pivot_wider(names_from=c("case","sex"), values_from="n_prop") %>%
+  filter(!str_detect(ccs_category_description, "Adjustment|Impulse|Delirium|Screening|Personality|Schizophrenia|usually diagnosed|Developmental")) %>%
+  rename("CCS Category"=ccs_category_description)
+
+transformed$ccs_main_and_other_diag_over_18s <-
+  tables$ccs_main_and_other_diag %>%
+  filter(age_group == "18+") %>%
+  select(case, sex, ccs_category_description, n_prop) %>%
+  pivot_wider(names_from=c("case","sex"), values_from="n_prop") %>%
+  # filter(!str_detect(ccs_category_description, "Adjustment|Impulse|Delirium|Screening|Personality|Schizophrenia|usually diagnosed|Developmental")) %>%
+  rename("CCS Category"=ccs_category_description)
+
+transformed$poisonings_and_sh <-
+  tables_long$poisonings_and_sh %>%
+  filter(age_group == "<18" & criterion == "Poisoning (960-979, T36-T50)") %>%
+  select(case, sex, n_prop, Diagnosis = criterion) %>%
+  pivot_wider(names_from=c("case","sex"), values_from="n_prop")
 ```
 
 ## Recalculating adversity tables
@@ -351,12 +405,27 @@ table_mvr_schnitzer_mh <-
   )
 ```
 
+## Table of CCS diagnoses
+
+```{r}
+
+```
+
+
 # Save transformed tables
 
 ```{r}
 write.xlsx(x = table_mvr_schnitzer_mh, file = "../Publications/Results paper 1/Table_MVR_Schnitzer_MH.xlsx")
 
 write.xlsx(x = table_icd, file = "../Publications/Results paper 1/Table_ICD_chapter_episodes.xlsx")
+
+write.xlsx(x = transformed$ccs_main_and_other_diag, file = "../Publications/Results paper 1/Table_CCS_diagnoses_main_or_other.xlsx")
+
+write.xlsx(x = transformed$ccs_main_and_other_diag_over_18s, file = "../Publications/Results paper 1/Table_CCS_diagnoses_main_or_other_over_18s.xlsx")
+
+write.xlsx(x = transformed$poisonings_and_sh, file = "../Publications/Results paper 1/Table_poisonings_incl_death_episodes_under_18s.xlsx")
+
+
 ```
 
 # Recalculating counts across age/gender

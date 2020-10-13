@@ -1,0 +1,54 @@
+---
+title: "Compile neatly formatted equivalence table for ICD chapters between ICD-9 and ICD-10"
+author: "Jan Savinc"
+date: "28/07/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Libraries
+
+```{r}
+library(tidyverse)
+```
+
+# Load equivalence table
+
+```{r}
+equivalence_table <- read_csv("./processed_ICD_codes/map_icd_equivalent_chapters.csv", col_types = "cc")
+```
+
+# Add roman numerals
+
+We'll expand the comma-separated values to separate rows, convert the number to roman numerals where possible, then condense to comma-separated values where multiple rows span same ICD-9 code.
+
+```{r}
+roman_or_character <- function(x) if_else(is.na(as.numeric(x)), x, as.character(as.roman(x)))
+## as.roman() returns type "roman", which doesn't support unique(), so we convert to character from roman
+
+neat_equivalence_table <-
+  equivalence_table %>%
+  separate_rows(icd_10,sep=",") %>%
+  mutate(
+    icd_9_roman = roman_or_character(icd_9),
+    icd_10_roman = roman_or_character(icd_10)
+  ) %>%
+  group_by(icd_9) %>%
+  summarise(
+    across(everything(),
+           ~ paste0(unique(.), collapse = ",") %>% 
+             if_else(. == "NA", NA_character_, .)  # replace result of pasting "NA" with NA
+           )
+  )
+```
+
+# Save result
+
+```{r}
+write_csv(neat_equivalence_table, path = "./processed_ICD_codes/equivalent_chapters_icd_9_and_10.csv")
+```

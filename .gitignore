@@ -7,10 +7,14 @@ CHASe-outside-safe-haven.Rproj
 extract_tables_from_online_article.R
 lit_review_merge_records
 merge_scopus_wos_records.pdf
-merge_scopus_wos_records.rmd
 mid-year-pop-est-17-all-tables-revised
 mid-year-pop-est-17-all-tables-revised.zip
 raw
 schnitzer2011
 test_matching_codes_with_inclusions_and_exclusions.R
 understanding_partial_dates.Rmd
+CONSORT_diagram
+occupation_classification
+icd_data
+compile_neatly_formatted_ICD_chapters_equivalence_icd_9_and_10.html
+hypothesis_testing_using_data_exported_from_safe_haven.html
