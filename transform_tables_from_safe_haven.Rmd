@@ -132,6 +132,24 @@ tables <-
 
 tables$poisonings_and_sh <-
   read_excel(path = "../Safe Haven Exports/ResultsResults_paper_1_tables_2020_07_30/Frequency_table_poisonings_and_self_harm.xlsx", sheet = 1) %>% slice(-nrow(.))  # remove last row, it's the caption
+
+tables <-
+  c(tables,
+    map(
+      .x = c(
+        "Carstairs, quintiles",
+        "SIMD, quintiles",
+        "Urban-rural,aggregated"
+      ),
+      .f = 
+        ~read_excel(
+              path = "../Safe Haven Exports/Exports 2020-10-07/Results_paper_1_tables/Frequency_table_geographic_indicators_at_death.xlsx", 
+              sheet = .x
+              ) %>%
+            slice(-nrow(.))  # remove last row, it's the caption
+      ) %>%
+      set_names(., nm = c("distribution_geo_carstairs_quintile", "distribution_geo_simd_quintile","distribution_geo_urban_rural_4_quintile"))
+)
 ```
 
 
@@ -279,6 +297,10 @@ The 0-1 and 1-10 age groups are very sparse, so we'll aggregate them. In additio
 ```{r}
 denominators <- list()
 denominators$individuals_with_any_records_prior_to_death <- tables_descriptives_cohort %>% select(case,sex,has_no_records_prior_to_death,denominator=N)
+
+denominators$individuals_lifetime <- denominators$individuals_with_any_records_prior_to_death %>%
+  group_by(case, sex) %>% summarise(denominator=sum(denominator), .groups="drop")
+
 ```
 
 ### Recalculated age groups
@@ -297,7 +319,7 @@ group_age_groups_0_to_10 <- function(data_tbl) {
 num_and_prop <- function(numerator, denominator, threshold=10, accuracy=0.01) {
   n_prop <- case_when(
     is.na(numerator)|is.na(denominator) ~ NA_character_,
-    numerator <= threshold ~ paste0("N<=",threshold),
+    numerator < threshold ~ paste0("N<",threshold),
     TRUE ~ paste0(numerator, " (", scales::percent(numerator/denominator, accuracy = accuracy), ")")
   )
   return(n_prop)
@@ -363,6 +385,12 @@ tables_long$mh_main_diag_only_recalculated <-
   filter(age_group!="18+") %>%
   left_join(denominators$individuals_with_any_records_prior_to_death %>% filter(has_no_records_prior_to_death=="No") %>% select(-has_no_records_prior_to_death), by = c("case","sex")) %>%
   mutate(n_prop = num_and_prop(numerator = n, denominator = denominator))
+
+## just assign existing tables, no changes needed
+tables_long[c("distribution_geo_carstairs_quintile", "distribution_geo_simd_quintile", 
+"distribution_geo_urban_rural_4_quintile")] <-
+  tables[c("distribution_geo_carstairs_quintile", "distribution_geo_simd_quintile", 
+"distribution_geo_urban_rural_4_quintile")]
 ```
 
 ### Recalculated age group tables transformed
@@ -412,6 +440,77 @@ table_mvr_schnitzer_mh <-
 ```
 
 
+## Table of geographical distributions
+
+We exported disaggregated data for sex & having records prior to death; there were small numbers for females & carstairs data, so carstairs 4 & 5 were merged for those & we'll merge them for the computations also.
+The SIMD & Urban-rural distributions can be aggregated mroe simply!
+
+```{r}
+transformed_recalculated[c("distribution_geo_simd_quintile", 
+"distribution_geo_urban_rural_4_quintile")] <-
+  tables_long[c("distribution_geo_simd_quintile", 
+"distribution_geo_urban_rural_4_quintile")] %>%
+  map(.x = ., .f = function(data_tbl) {
+    recalculated_chunk_records <-
+      data_tbl %>%
+      select(-n_prop) %>%  # we'll recalculate the proportion
+      group_by(case, sex, Indicator, Measure) %>%
+      summarise(
+        has_no_records_prior_to_death = "Both",
+        N = sum(N),
+        denominator = sum(denominator),
+        .groups = "drop"
+      )
+    recalculated_chunk_sexes <-
+      recalculated_chunk_records %>%
+      group_by(case, has_no_records_prior_to_death, Indicator, Measure) %>%
+      summarise(
+        sex = "Both",
+        N = sum(N),
+        denominator = sum(denominator),
+        .groups = "drop"
+      )
+    bind_rows(
+      data_tbl,
+      recalculated_chunk_records,
+      recalculated_chunk_sexes
+    ) %>%
+      mutate(n_prop = num_and_prop(numerator = N, denominator = denominator))
+  })
+
+transformed_recalculated$distribution_geo_carstairs_quintile <- 
+  tables_long$distribution_geo_carstairs_quintile %>%
+  (function(data_tbl) {
+    recalculated_chunk_records <-
+      data_tbl %>%
+      select(-n_prop) %>%  # we'll recalculate the proportion
+      mutate(Indicator = if_else(Indicator %in% c("4","5"), "4 & 5", Indicator)) %>%
+      group_by(case, sex, Indicator, Measure) %>%
+      summarise(
+        has_no_records_prior_to_death = "Both",
+        N = sum(N),
+        denominator = sum(unique(denominator)),
+        .groups = "drop"
+      )
+    recalculated_chunk_sexes <-
+      recalculated_chunk_records %>%
+      group_by(case, has_no_records_prior_to_death, Indicator, Measure) %>%
+      summarise(
+        sex = "Both",
+        N = sum(N),
+        denominator = sum(denominator),
+        .groups = "drop"
+      )
+    bind_rows(
+      data_tbl,
+      recalculated_chunk_records,
+      recalculated_chunk_sexes
+    ) %>%
+      mutate(n_prop = num_and_prop(numerator = N, denominator = denominator))
+  })
+```
+
+
 # Save transformed tables
 
 ```{r}
@@ -425,7 +524,9 @@ write.xlsx(x = transformed$ccs_main_and_other_diag_over_18s, file = "../Publicat
 
 write.xlsx(x = transformed$poisonings_and_sh, file = "../Publications/Results paper 1/Table_poisonings_incl_death_episodes_under_18s.xlsx")
 
-
+write.xlsx(x = transformed_recalculated[c("distribution_geo_carstairs_quintile", "distribution_geo_simd_quintile", 
+"distribution_geo_urban_rural_4_quintile")] %>% set_names(., nm = c("Carstairs, quintiles", "SIMD, quintiles", "Urban-rural,aggregated")), file = "../Publications/Results paper 1/Table_distribution_geographic_indicators.xlsx"
+)
 ```
 
 # Recalculating counts across age/gender
@@ -434,5 +535,46 @@ write.xlsx(x = transformed$poisonings_and_sh, file = "../Publications/Results pa
 
 ```{r}
 
+```
+
+# Mothers' adversity tables
+
+```{r}
+tables$mothers_adversity_mvr <- read_excel(path = "../Safe Haven Exports/2020-04-07/Mothers_health/Freq_table_indivi_whose_mothers_had_MVR_codes_coarse.xlsx", sheet = 1) %>% slice(-nrow(.))
+
+tables$mothers_adversity_ccs <- read_excel(path = "../Safe Haven Exports/2020-04-07/Mothers_health/Freq_table_indiv_whose_mothers_had_mental_health_codes.xlsx", sheet = 1) %>% slice(-nrow(.))
+
+tables_long$mothers_adversity_mvr <-
+  tables$mothers_adversity_mvr %>%
+  filter(dataset=="SMR01") %>% pivot_longer(cols=c(case,control), names_to="case", values_to = "n_prop") %>%
+  ## Note: we can't recalculate using the smaller denominator because we don't know if the individuals with maternal adversity were also the ones with hospital records!
+  # left_join(denominators$individuals_with_any_records_prior_to_death %>% filter(has_no_records_prior_to_death=="No"), by=c("case","sex")) %>%
+  # mutate(
+  #   n = str_extract(n_prop, "^(\\d+)\\s"),
+  #   n = as.numeric(n),
+  #   n_prop2 = num_and_prop(numerator = n, denominator = denominator)
+  #   ) %>%
+  pivot_wider(names_from = c(sex, case), values_from=n_prop) %>%
+  select(-dataset)
+
+tables_long$mothers_adversity_ccs <-
+  tables$mothers_adversity_ccs %>%
+  filter(position=="any position") %>%
+  pivot_longer(cols=c(case,control), names_to="case", values_to = "n_prop") %>%
+    mutate(
+    n = str_extract(n_prop, "^(\\d+)\\s"),
+    n = as.numeric(n),
+    ) %>%
+  (function(data_tbl) {
+    bind_rows(
+      data_tbl %>% filter(timespan %in% c("birth","lifetime")) %>% group_by(sex,case) %>% summarise(n=sum(n,na.rm=TRUE), timespan="lifetime", .group="drop"),
+      data_tbl %>% filter(timespan %in% c("birth","after birth")) %>% group_by(sex,case) %>% summarise(n=sum(n,na.rm=TRUE), timespan="birth or after", .group="drop")
+    )
+  }) %>%
+  left_join(denominators$individuals_lifetime, by=c("case","sex")) %>%
+  mutate(n_prop2 = num_and_prop(n)) %>%  # calling i n_prop2 so it can be checked against previous n_prop
+  pivot_wider(names_from = c(sex, case), values_from=n_prop2)
+
+  
 ```
 
