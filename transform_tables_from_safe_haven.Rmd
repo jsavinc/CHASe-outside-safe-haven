@@ -94,9 +94,6 @@ tables <-
   set_names(., nm = c("icd_main_and_other_diag", "icd_main_diag_only"))
 )
 
-# tables_episodes <- map(
-#   # .x = c("")
-# )
 tables$episodes_prior_to_death <- read_excel(path = "../Safe Haven Exports/Episode descriptives/Descriptives_number_of_episodes_admissions_only.xlsx", sheet = 3)
 
 tables_descriptives_cohort <- read_excel(path = "../Safe Haven Exports/Descriptive summary of cohort & individuals with any records/Descriptive_summary_cohort_by_whether_they_had_any_records_prior_to_death.xlsx", sheet = 1) %>%
@@ -150,6 +147,32 @@ tables <-
       ) %>%
       set_names(., nm = c("distribution_geo_carstairs_quintile", "distribution_geo_simd_quintile","distribution_geo_urban_rural_4_quintile"))
 )
+
+tables$ccs_any_diagnosis_excluding_death_episodes <-
+  read_excel(
+          path = "../Safe Haven Exports/Results_paper_1_tables, 2020-09-14/Frequency_table_ccs_categories.xlsx", 
+          sheet = 1
+          ) %>%
+        slice(-nrow(.))  # remove last row, it's the caption
+
+tables <-
+  c(tables,
+    map(
+      .x = c("MVR,ind. with pre-death records", "Schnitzer,ind.w.pre-death recs", "CCS,main diag w.pre-death recs.", "CCS,any diag w.pre-death recs."),
+      .f = 
+        ~read_excel(
+              path = "../Safe Haven Exports/Results_paper_1_tables, 2020-09-14/Frequency_table_MVR_Schnitzer_CCS_index_episodes_individuals_with_records_prior_to_death.xlsx", 
+              sheet = .x
+              ) %>%
+            slice(-nrow(.))  # remove last row, it's the caption
+      ) %>%
+      set_names(., nm = c("mvr_individuals_index_epi", "schnitzer_individuals_index_epi","ccs_main_diag_individuals_index_epi","ccs_any_diag_individuals_index_epi"))
+)
+
+
+tables$poisonings_by_intent <-
+  read_excel(path = "../Safe Haven Exports/Results_paper_1_tables, 2020-09-14/Frequency_table_poisonings_by_intent.xlsx", sheet = 1) %>% slice(-nrow(.))  # remove last row, it's the caption
+
 ```
 
 
@@ -183,11 +206,41 @@ tables_long[c("icd_main_and_other_diag", "icd_main_diag_only")] <- tables[c("icd
 ## no converting needed for these
 tables_long[c("ccs_main_and_other_diag", "ccs_main_diag_only", "poisonings_and_sh")] <-
   tables[c("ccs_main_and_other_diag", "ccs_main_diag_only", "poisonings_and_sh")]
+
+## just assign existing tables, no changes needed
+tables_long[c("distribution_geo_carstairs_quintile", "distribution_geo_simd_quintile", 
+"distribution_geo_urban_rural_4_quintile")] <-
+  tables[c("distribution_geo_carstairs_quintile", "distribution_geo_simd_quintile", 
+"distribution_geo_urban_rural_4_quintile")]
 ```
 
 
 # Transform tables
 
+## Helper functions
+
+```{r}
+## helper function to group together ages 0-1 and 1-10
+group_age_groups_0_to_10 <- function(data_tbl) {
+  data_tbl %>%
+    mutate(age_group = case_when(
+      age_group %in% c(">=0, <1",">=1, <10") ~ ">=0, <10",
+      TRUE ~ age_group
+    ))
+}
+
+## helper function for calculating number and proportion
+num_and_prop <- function(numerator, denominator, threshold=10, accuracy=0.01) {
+  n_prop <- case_when(
+    is.na(numerator)|is.na(denominator) ~ NA_character_,
+    numerator < threshold ~ paste0("N<",threshold),
+    TRUE ~ paste0(numerator, " (", scales::percent(numerator/denominator, accuracy = accuracy), ")")
+  )
+  return(n_prop)
+}
+```
+
+## Various tables
 
 ```{r}
 transformed <- list()
@@ -286,13 +339,66 @@ transformed$poisonings_and_sh <-
   filter(age_group == "<18" & criterion == "Poisoning (960-979, T36-T50)") %>%
   select(case, sex, n_prop, Diagnosis = criterion) %>%
   pivot_wider(names_from=c("case","sex"), values_from="n_prop")
+
+transformed$ccs_any_diagnosis_excluding_death_episodes <-
+  tables$ccs_any_diagnosis_excluding_death_episodes %>%
+  filter(age_group != "18+") %>%
+  filter(sex!="both") %>%
+  select(case, sex, ccs_category_description, n_prop) %>%
+  pivot_wider(names_from=c("case","sex"), values_from="n_prop") %>%
+  # filter(!str_detect(ccs_category_description, "Adjustment|Impulse|Delirium|Screening|Personality|Schizophrenia|usually diagnosed|Developmental")) %>%
+  rename("CCS Category"=ccs_category_description)
+
+transformed$mvr_individuals_index_epi <-
+  tables$mvr_individuals_index_epi %>%
+  select(case, sex, age_group, n_prop) %>%
+  # filter(!age_group %in% c("<18","18+")) %>%
+  filter(!age_group %in% c("<18")) %>%
+  pivot_wider(names_from=c("case","sex"), values_from="n_prop") %>%
+  mutate(indicator = "MVR") %>%
+  relocate(indicator)
+
+transformed$schnitzer_individuals_index_epi <-
+  tables$schnitzer_individuals_index_epi %>%
+  select(case, sex, age_group, n_prop) %>%
+  filter(!age_group %in% c("<18","18+")) %>%
+  pivot_wider(names_from=c("case","sex"), values_from="n_prop") %>%
+  mutate(indicator = "Codes suggestive of neglect (Schnitzer et al., 2011)") %>%
+  relocate(indicator)
+
+transformed$ccs_any_diag_individuals_index_epi <-
+  tables$ccs_any_diag_individuals_index_epi %>%
+  select(case, sex, age_group, n_prop) %>%
+   # filter(!age_group %in% c("<18","18+")) %>%
+  filter(!age_group %in% c("<18")) %>%
+  pivot_wider(names_from=c("case","sex"), values_from="n_prop") %>%
+  mutate(indicator = "CCS (any diagnosis)") %>%
+  relocate(indicator)
+
+transformed$ccs_any_diag_individuals_index_epi_over_18 <-
+  tables$ccs_any_diag_individuals_index_epi %>%
+  select(case, sex, age_group, n_prop) %>%
+  filter(age_group %in% c("18+")) %>%
+  pivot_wider(names_from=c("case","sex"), values_from="n_prop") %>%
+  mutate(indicator = "CCS (any diagnosis)") %>%
+  relocate(indicator)
+
+transformed$main_adversities <-
+  transformed[c("mvr_individuals_index_epi","schnitzer_individuals_index_epi","ccs_any_diag_individuals_index_epi")] %>% bind_rows
+
+transformed$poisonings_by_intent <-
+  tables$poisonings_by_intent %>%
+  # filter(age_group!="18+") %>%
+  select(case, sex, age_group, poisoning_external_cause, n_prop) %>%
+  arrange(case,sex = factor(levels="both","female","male")) %>%
+  pivot_wider(names_from=c("case","sex"), values_from="n_prop") %>%
+  arrange(poisoning_external_cause) %>%
+  relocate(poisoning_external_cause)
 ```
 
-## Recalculating adversity tables
 
-The 0-1 and 1-10 age groups are very sparse, so we'll aggregate them. In addition, we'll recalculate the rates to use the denominator of all individuals who had any episodes before death.
+## Denominators
 
-### Denominators
 
 ```{r}
 denominators <- list()
@@ -301,141 +407,9 @@ denominators$individuals_with_any_records_prior_to_death <- tables_descriptives_
 denominators$individuals_lifetime <- denominators$individuals_with_any_records_prior_to_death %>%
   group_by(case, sex) %>% summarise(denominator=sum(denominator), .groups="drop")
 
-```
-
-### Recalculated age groups
-
-```{r}
-## helper function to group together ages 0-1 and 1-10
-group_age_groups_0_to_10 <- function(data_tbl) {
-  data_tbl %>%
-    mutate(age_group = case_when(
-      age_group %in% c(">=0, <1",">=1, <10") ~ ">=0, <10",
-      TRUE ~ age_group
-    ))
-}
-
-## helper function for calculating number and proportion
-num_and_prop <- function(numerator, denominator, threshold=10, accuracy=0.01) {
-  n_prop <- case_when(
-    is.na(numerator)|is.na(denominator) ~ NA_character_,
-    numerator < threshold ~ paste0("N<",threshold),
-    TRUE ~ paste0(numerator, " (", scales::percent(numerator/denominator, accuracy = accuracy), ")")
-  )
-  return(n_prop)
-}
-
-tables_long$mvr_recalculated <-
-  tables_long$mvr %>%
-  mutate(
-    n = str_replace(n_prop, pattern="<=10", replacement=NA_character_),
-    n = str_replace(n, pattern=" \\(.*\\)", replacement = ""), 
-    n = as.numeric(n)
-    ) %>%
-  group_age_groups_0_to_10() %>%
-  group_by(
-    case, sex, age_group, Type
-  ) %>%
-  summarise(
-    n = sum(n), .groups="drop"
-  ) %>%
-  filter(age_group!="18+") %>%
-  left_join(denominators$individuals_with_any_records_prior_to_death %>% filter(has_no_records_prior_to_death=="No") %>% select(-has_no_records_prior_to_death), by = c("case","sex")) %>%
-  mutate(n_prop = num_and_prop(numerator = n, denominator = denominator))
-
-tables_long$schnitzer_recalculated <-
-  tables_long$schnitzer %>%
-  mutate(
-    n = str_replace(n_prop, pattern="<=10", replacement=NA_character_),
-    n = str_replace(n, pattern=" \\(.*\\)", replacement = ""), 
-    n = as.numeric(n)
-    ) %>%
-  group_age_groups_0_to_10() %>%
-  group_by(
-    case, sex, age_group, Type
-  ) %>%
-  summarise(
-    n = sum(n), .groups="drop"
-  ) %>%
-  filter(age_group==">=0, <10") %>%
-  left_join(denominators$individuals_with_any_records_prior_to_death %>% filter(has_no_records_prior_to_death=="No") %>% select(-has_no_records_prior_to_death), by = c("case","sex")) %>%
-  group_by(case,age_group,Type) %>%  # the following infers female counts from both & male where female is NA, however, ideally we would ahve worked this out a a previous stage
-  mutate(
-    n_both = n[sex=="both"], 
-    n_male = n[sex=="male"],
-    n = if_else(!is.na(n_both) & !is.na(n_male) & is.na(n) & sex=="female", n_both-n_male, n)
-  ) %>%
-  mutate(n_prop = num_and_prop(numerator = n, denominator = denominator))
-
-tables_long$mh_main_diag_only_recalculated <-
-  tables_long$mh_main_diag_only %>%
-  select(-denominator) %>%
-  mutate(
-    n = str_replace(n_prop, pattern="<=10", replacement=NA_character_),
-    n = str_replace(n, pattern=" \\(.*\\)", replacement = ""), 
-    n = as.numeric(n)
-    ) %>%
-  group_age_groups_0_to_10() %>%
-  group_by(
-    case, sex, age_group
-  ) %>%
-  summarise(
-    n = sum(n), .groups="drop"
-  ) %>%
-  filter(age_group!="18+") %>%
-  left_join(denominators$individuals_with_any_records_prior_to_death %>% filter(has_no_records_prior_to_death=="No") %>% select(-has_no_records_prior_to_death), by = c("case","sex")) %>%
-  mutate(n_prop = num_and_prop(numerator = n, denominator = denominator))
-
-## just assign existing tables, no changes needed
-tables_long[c("distribution_geo_carstairs_quintile", "distribution_geo_simd_quintile", 
-"distribution_geo_urban_rural_4_quintile")] <-
-  tables[c("distribution_geo_carstairs_quintile", "distribution_geo_simd_quintile", 
-"distribution_geo_urban_rural_4_quintile")]
-```
-
-### Recalculated age group tables transformed
-
-```{r}
-transformed_recalculated <- list()
-
-transformed_recalculated$mvr_all_types <-
-  tables_long$mvr_recalculated %>%
-  filter(Type == "All types") %>%  # only show all types combined
-  filter(age_group != "<18") %>%  # only show separate age groups, not combined
-  select(-Type,-n,-denominator) %>%
-  arrange(case, sex, age_group) %>%
-  pivot_wider(names_from = c("case","sex"), values_from = "n_prop") %>%
-  mutate(indicator = "MVR") %>%
-  relocate(indicator)
-
-transformed_recalculated$schnitzer_all_types <-
-  tables_long$schnitzer_recalculated %>%
-  filter(Type == "All types") %>%  # only show all types combined
-  filter(age_group %in% c(">=0, <10")) %>%  # Schnitzer only defined for 0-10
-  select(-Type,-n,-denominator) %>%
-  arrange(case, sex, age_group) %>%
-  pivot_wider(names_from = c("case","sex"), values_from = "n_prop") %>%
-  mutate(indicator = "Schnitzer") %>%
-  relocate(indicator)
-
-transformed_recalculated$mh_main_diag <-
-  tables_long$mh_main_diag_only_recalculated %>%
-  select(-n,-denominator) %>%
-  filter(age_group != "<18") %>%  # only show separate age groups, not combined
-  arrange(case, sex, age_group) %>%
-  pivot_wider(names_from = c("case","sex"), values_from = "n_prop") %>%
-  mutate(indicator = "MH (main diagnosis)") %>%
-  relocate(indicator)
-
-table_mvr_schnitzer_mh <-
-  bind_rows(
-    transformed_recalculated[c("mvr_all_types", "schnitzer_all_types", "mother_died", "mh_main_diag")]
-  )
-```
-
-## Table of CCS diagnoses
-
-```{r}
+# TODO: export these from SH!
+# denominators$individuals_with_records_alive_by_age_group <-
+#   NULL
 
 ```
 
@@ -514,15 +488,20 @@ transformed_recalculated$distribution_geo_carstairs_quintile <-
 # Save transformed tables
 
 ```{r}
-write.xlsx(x = table_mvr_schnitzer_mh, file = "../Publications/Results paper 1/Table_MVR_Schnitzer_MH.xlsx")
+# write.xlsx(x = table_mvr_schnitzer_mh, file = "../Publications/Results paper 1/Table_MVR_Schnitzer_MH.xlsx")
+## re-write the old table!
+write.xlsx(x = transformed$main_adversities, file = "../Publications/Results paper 1/Table_MVR_Schnitzer_MH.xlsx")
 
 write.xlsx(x = table_icd, file = "../Publications/Results paper 1/Table_ICD_chapter_episodes.xlsx")
 
-write.xlsx(x = transformed$ccs_main_and_other_diag, file = "../Publications/Results paper 1/Table_CCS_diagnoses_main_or_other.xlsx")
+# write.xlsx(x = transformed$ccs_main_and_other_diag, file = "../Publications/Results paper 1/Table_CCS_diagnoses_main_or_other.xlsx")
+write.xlsx(x = transformed$ccs_any_diagnosis_excluding_death_episodes, file = "../Publications/Results paper 1/Table_CCS_diagnoses_any_position_removed_death_epi.xlsx")
 
 write.xlsx(x = transformed$ccs_main_and_other_diag_over_18s, file = "../Publications/Results paper 1/Table_CCS_diagnoses_main_or_other_over_18s.xlsx")
 
 write.xlsx(x = transformed$poisonings_and_sh, file = "../Publications/Results paper 1/Table_poisonings_incl_death_episodes_under_18s.xlsx")
+
+write.xlsx(x = transformed$poisonings_by_intent, file = "../Publications/Results paper 1/Table_poisonings_by_intent.xlsx")
 
 write.xlsx(x = transformed_recalculated[c("distribution_geo_carstairs_quintile", "distribution_geo_simd_quintile", 
 "distribution_geo_urban_rural_4_quintile")] %>% set_names(., nm = c("Carstairs, quintiles", "SIMD, quintiles", "Urban-rural,aggregated")), file = "../Publications/Results paper 1/Table_distribution_geographic_indicators.xlsx"
@@ -530,12 +509,6 @@ write.xlsx(x = transformed_recalculated[c("distribution_geo_carstairs_quintile",
 ```
 
 # Recalculating counts across age/gender
-
-## Loading tables
-
-```{r}
-
-```
 
 # Mothers' adversity tables
 
@@ -578,3 +551,116 @@ tables_long$mothers_adversity_ccs <-
   
 ```
 
+
+# Obsolete approaches
+
+
+### Recalculated age group tables transformed
+
+
+```{r}
+# NOTE: this is now dealt with with neweredata exporetd from SH
+
+
+# tables_long$mvr_recalculated <-
+#   tables_long$mvr %>%
+#   mutate(
+#     n = str_replace(n_prop, pattern="<=10", replacement=NA_character_),
+#     n = str_replace(n, pattern=" \\(.*\\)", replacement = ""), 
+#     n = as.numeric(n)
+#     ) %>%
+#   group_age_groups_0_to_10() %>%
+#   group_by(
+#     case, sex, age_group, Type
+#   ) %>%
+#   summarise(
+#     n = sum(n), .groups="drop"
+#   ) %>%
+#   filter(age_group!="18+") %>%
+#   left_join(denominators$individuals_with_any_records_prior_to_death %>% filter(has_no_records_prior_to_death=="No") %>% select(-has_no_records_prior_to_death), by = c("case","sex")) %>%
+#   mutate(n_prop = num_and_prop(numerator = n, denominator = denominator))
+# 
+# tables_long$schnitzer_recalculated <-
+#   tables_long$schnitzer %>%
+#   mutate(
+#     n = str_replace(n_prop, pattern="<=10", replacement=NA_character_),
+#     n = str_replace(n, pattern=" \\(.*\\)", replacement = ""), 
+#     n = as.numeric(n)
+#     ) %>%
+#   group_age_groups_0_to_10() %>%
+#   group_by(
+#     case, sex, age_group, Type
+#   ) %>%
+#   summarise(
+#     n = sum(n), .groups="drop"
+#   ) %>%
+#   filter(age_group==">=0, <10") %>%
+#   left_join(denominators$individuals_with_any_records_prior_to_death %>% filter(has_no_records_prior_to_death=="No") %>% select(-has_no_records_prior_to_death), by = c("case","sex")) %>%
+#   group_by(case,age_group,Type) %>%  # the following infers female counts from both & male where female is NA, however, ideally we would ahve worked this out a a previous stage
+#   mutate(
+#     n_both = n[sex=="both"], 
+#     n_male = n[sex=="male"],
+#     n = if_else(!is.na(n_both) & !is.na(n_male) & is.na(n) & sex=="female", n_both-n_male, n)
+#   ) %>%
+#   mutate(n_prop = num_and_prop(numerator = n, denominator = denominator))
+# 
+# tables_long$mh_main_diag_only_recalculated <-
+#   tables_long$mh_main_diag_only %>%
+#   select(-denominator) %>%
+#   mutate(
+#     n = str_replace(n_prop, pattern="<=10", replacement=NA_character_),
+#     n = str_replace(n, pattern=" \\(.*\\)", replacement = ""), 
+#     n = as.numeric(n)
+#     ) %>%
+#   group_age_groups_0_to_10() %>%
+#   group_by(
+#     case, sex, age_group
+#   ) %>%
+#   summarise(
+#     n = sum(n), .groups="drop"
+#   ) %>%
+#   filter(age_group!="18+") %>%
+#   left_join(denominators$individuals_with_any_records_prior_to_death %>% filter(has_no_records_prior_to_death=="No") %>% select(-has_no_records_prior_to_death), by = c("case","sex")) %>%
+#   mutate(n_prop = num_and_prop(numerator = n, denominator = denominator))
+
+```
+
+```{r}
+# Note: this is now dealt with by having exported new data
+
+# transformed_recalculated <- list()
+# 
+# transformed_recalculated$mvr_all_types <-
+#   tables_long$mvr_recalculated %>%
+#   filter(Type == "All types") %>%  # only show all types combined
+#   filter(age_group != "<18") %>%  # only show separate age groups, not combined
+#   select(-Type,-n,-denominator) %>%
+#   arrange(case, sex, age_group) %>%
+#   pivot_wider(names_from = c("case","sex"), values_from = "n_prop") %>%
+#   mutate(indicator = "MVR") %>%
+#   relocate(indicator)
+# 
+# transformed_recalculated$schnitzer_all_types <-
+#   tables_long$schnitzer_recalculated %>%
+#   filter(Type == "All types") %>%  # only show all types combined
+#   filter(age_group %in% c(">=0, <10")) %>%  # Schnitzer only defined for 0-10
+#   select(-Type,-n,-denominator) %>%
+#   arrange(case, sex, age_group) %>%
+#   pivot_wider(names_from = c("case","sex"), values_from = "n_prop") %>%
+#   mutate(indicator = "Schnitzer") %>%
+#   relocate(indicator)
+# 
+# transformed_recalculated$mh_main_diag <-
+#   tables_long$mh_main_diag_only_recalculated %>%
+#   select(-n,-denominator) %>%
+#   filter(age_group != "<18") %>%  # only show separate age groups, not combined
+#   arrange(case, sex, age_group) %>%
+#   pivot_wider(names_from = c("case","sex"), values_from = "n_prop") %>%
+#   mutate(indicator = "MH (main diagnosis)") %>%
+#   relocate(indicator)
+# 
+# table_mvr_schnitzer_mh <-
+#   bind_rows(
+#     transformed_recalculated[c("mvr_all_types", "schnitzer_all_types", "mother_died", "mh_main_diag")]
+#   )
+```
