@@ -173,6 +173,9 @@ tables <-
 tables$poisonings_by_intent <-
   read_excel(path = "../Safe Haven Exports/Results_paper_1_tables, 2020-09-14/Frequency_table_poisonings_by_intent.xlsx", sheet = 1) %>% slice(-nrow(.))  # remove last row, it's the caption
 
+
+tables$not_in_work <-
+  read_excel(path = "../Safe Haven Exports/Descriptive summary of cohort & individuals with any records/Descriptive_summary_cohort_by_whether_they_had_any_records_prior_to_death.xlsx", sheet = 1, ) %>% slice(-nrow(.))  # remove last row, it's the caption
 ```
 
 
@@ -394,6 +397,31 @@ transformed$poisonings_by_intent <-
   pivot_wider(names_from=c("case","sex"), values_from="n_prop") %>%
   arrange(poisoning_external_cause) %>%
   relocate(poisoning_external_cause)
+
+transformed$not_in_work <-
+  tables$not_in_work %>% 
+  filter(!is.na(proportion_not_in_work)) %>%
+  select(case,sex,has_no_records_prior_to_death,N,proportion_not_in_work) %>%
+  mutate(N_not_in_work = as.integer(N * proportion_not_in_work)) %>%
+  (function(tbl) {
+    bind_rows(
+      tbl,
+      tbl %>%
+        group_by(case,sex) %>%
+        summarise(
+          has_no_records_prior_to_death = "Both",
+          N = sum(N),
+          N_not_in_work = sum(N_not_in_work),
+          .groups = "drop"
+        ) %>%
+        mutate(
+          proportion_not_in_work = N_not_in_work / N
+          )
+    )
+  }) %>%
+  mutate(
+    percent_not_in_work = scales::percent(proportion_not_in_work, accuracy=0.1)
+  )
 ```
 
 
@@ -503,9 +531,12 @@ write.xlsx(x = transformed$poisonings_and_sh, file = "../Publications/Results pa
 
 write.xlsx(x = transformed$poisonings_by_intent, file = "../Publications/Results paper 1/Table_poisonings_by_intent.xlsx")
 
+
 write.xlsx(x = transformed_recalculated[c("distribution_geo_carstairs_quintile", "distribution_geo_simd_quintile", 
 "distribution_geo_urban_rural_4_quintile")] %>% set_names(., nm = c("Carstairs, quintiles", "SIMD, quintiles", "Urban-rural,aggregated")), file = "../Publications/Results paper 1/Table_distribution_geographic_indicators.xlsx"
 )
+
+write.xlsx(x = transformed$not_in_work, file = "../Publications/Results paper 1/Table_not_in_work.xlsx")
 ```
 
 # Recalculating counts across age/gender
