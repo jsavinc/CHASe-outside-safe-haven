@@ -103,9 +103,79 @@ codes_translated <-
 codes_translated$inclusions %>%
   select(condition, icd10, comment_icd10) %>%
   mutate(
-    icd10who = as.icd10who(icd10),
-    icd10cm = explain_code(icd10who)
+    icd10who = as.icd10who(icd10)#,
+    # icd10cm = explain_code(icd10who)
     )
+
+icd::explain_code("614.9")
+icd::explain_code("N73")
+
+
+icd::explain_code("9224")
+icd::explain_code("S302")
+
+icd::explain_code("V715")
+icd::explain_code("Z044")
+
+## observation for alleged abuse/neglext
+icd::explain_code("V7181")
+icd::explain_code("Z047")
+icd::explain_code("Z0471")
+icd::explain_code("Z047")
+gem_combined %>% filter(str_detect(icd9cm,"V7181"))
+
+## retinal haemorrhage
+icd::explain_code("36281")
+gem_combined %>% filter(str_detect(icd9cm,"36281"))
+icd::explain_code("H356")
+
+## rib fractures
+icd::explain_code("8070")
+icd::explain_code("8071")
+icd::explain_code("S223") # one rib
+icd::explain_code("S224") # multiple ribs
+
+icd::explain_code("811")
+icd::explain_code("S421")
+
+## traumatic subdural hemorrhage
+## with or without open wound is distinguished
+icd::explain_code("8522")
+icd::explain_code("8523")
+icd::explain_code("S065")
+icd::explain_code("S06893")
+
+## stomach injury originally specified as injury with open wound but not in description so i think we can translate to more general code
+icd::explain_code("8631")
+icd::explain_code("S363")
+
+## assault
+icd::explain_code("E965")
+icd::explain_code("X93")
+icd::explain_code("X94")
+icd::explain_code("X95")
+icd::explain_code("X96")
+icd::explain_code("E966")
+icd::explain_code("X99")
+icd::explain_code("E9682")
+icd::explain_code("Y00")
+## assault NOS
+icd::explain_code("E9689")
+icd::explain_code("Y09")
+
+# TODO: this needs looking into!
+## undet intent other means
+icd::explain_code("E988")
+icd::explain_code("Y26")
+
+# TODO: this is also complicated - icd-10 splits vertebrae across body systems
+# vertebral fracture
+icd::explain_code("805")
+icd::explain_code("S12")
+# S12.0,S12.1,S12.2,S12.7,S12.9,S22.0,S22.1,S32.0,S32.7
+icd::explain_code("S121")
+
+
 ```
 
 
