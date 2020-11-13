@@ -43,6 +43,10 @@ data_cohort_by_whether_they_had_records_prior_to_death <- read_excel(
   ) %>%
   slice(-13)  # remove footnote entry in spreadsheet
 
+data_descriptives_carstairs_simd <- read_excel(
+  path = "X:/R1369/CSO FULL grant/Safe Haven Exports/Exports 2020-10-07/Results_paper_1_tables/Descriptives_carstairs_and_simd.xlsx", sheet = 1
+) %>% slice(-nrow(.))  # remove last row - it's the footnote
+
 hypothesis_tests <- list()  # empty list for storing hypothesis tests!
 ```
 
@@ -124,17 +128,30 @@ hypothesis_tests$t_test_age_difference_cases_with_and_without_records %>%
 # quantities_to_test_with_t_test <- c("age","carstairs","urban_rural")
 # quantities_to_test_with_chisq_test <- c("proportion_not_in_work")
 
-long_data_cohort_by_whether_they_had_records_prior_to_death_for_t_tests <- 
-  data_cohort_by_whether_they_had_records_prior_to_death %>%
-  filter(sex != "both") %>%
-  mutate(n_age = N, n_carstairs = N, n_urban_rural = N) %>%
-  select(-matches("median|iqr|q1|q3|proportion"), -N) %>%
-  pivot_longer(cols = matches("age|carstairs|urban_rural"), names_to = c("statistic","variable"), values_to = "value", names_pattern = "(mean|sd|n)_(.*)")
+long_data_cohort_by_whether_they_had_records_prior_to_death_for_t_tests <-
+  bind_rows(
+  ## AGE  
+    data_cohort_by_whether_they_had_records_prior_to_death %>%  # this uses deciles for carstairs so we'll take the newer quintile carstairs data from different table
+    # filter(sex != "both") %>%
+    mutate(n_age = N, n_carstairs = N, n_urban_rural = N) %>%
+    select(-matches("median|iqr|q1|q3|proportion"), -N) %>%
+    pivot_longer(cols = matches("age|carstairs|urban_rural"), names_to = c("statistic","variable"), values_to = "value", names_pattern = "(mean|sd|n)_(.*)") %>%
+    filter(variable=="age" & case=="case")  # only keep age, which only makes sense for cases
+    ,
+    ## CARSTAIRS & SIMD
+    data_descriptives_carstairs_simd %>% 
+    # filter(measure=="quintile") %>%
+    mutate(variable=paste0(tolower(geographic_indicator),"_",measure)) %>%
+    rename_all(~tolower(.)) %>%
+    select(-matches("median|iqr|q1|q3|proportion|geographic_indicator|^measure")) %>%
+    pivot_longer(cols=c(n,mean,sd), names_to="statistic",values_to="value")
+  )
 
 hypothesis_tests$t_tests_sex_differences <-
   long_data_cohort_by_whether_they_had_records_prior_to_death_for_t_tests %>%
-  group_by(case, has_no_records_prior_to_death, variable) %>%
+  filter(sex!="both") %>%
   pivot_wider(names_from = c("sex","statistic"), values_from = "value") %>%
+  group_by(case, has_no_records_prior_to_death, variable) %>%
   summarise(
     BSDA::tsum.test(
       mean.x = female_mean,
@@ -144,10 +161,36 @@ hypothesis_tests$t_tests_sex_differences <-
       s.y = male_sd,
       n.y = male_n,
       var.equal = FALSE
-      ) %>% tidy, 
+      ) %>% tidy,
+    difference = estimate1-estimate2,
+    meaning = "female - male (1=female)",
     .groups = "drop"
-    )
+    ) %>%
+  relocate(meaning, difference, .after = variable)
 
+hypothesis_tests$t_tests_cohort_differences <-
+  long_data_cohort_by_whether_they_had_records_prior_to_death_for_t_tests %>%
+  filter(variable!="age") %>%  # can't compare age, not sensible for controls
+  filter(has_no_records_prior_to_death != "Both") %>%  # without splitting by had records prior to death, all descriptives are the same! (cases matched to control on geography)
+  pivot_wider(names_from = c("case","statistic"), values_from = "value") %>%
+  group_by(sex, has_no_records_prior_to_death, variable) %>%
+  summarise(
+    BSDA::tsum.test(
+      mean.x = case_mean,
+      s.x = case_sd,
+      n.x = case_n,
+      mean.y = control_mean,
+      s.y = control_sd,
+      n.y = control_n,
+      var.equal = FALSE
+      ) %>% tidy,
+    difference = estimate1-estimate2,
+    meaning = "case - control (1=case)",
+    .groups = "drop"
+    ) %>%
+  relocate(meaning, difference, .after = variable)
+
+## Proportion tests of not in work
 hypothesis_tests$prop_tests_sex_differences <-
   data_cohort_by_whether_they_had_records_prior_to_death %>%
   filter(sex != "both") %>%
@@ -170,6 +213,10 @@ hypothesis_tests$prop_tests_sex_differences <-
 hypothesis_tests$t_tests_sex_differences %>%
   filter(p.value < .05) %>%
   kable(caption = "t-tests of sex difference at p < .05", format.args = list(nsmall=4))
+
+hypothesis_tests$t_tests_cohort_differences %>%
+  filter(p.value < .05) %>%
+  kable(caption = "t-tests of cohorty (case - control) difference at p < .05", format.args = list(nsmall=4))
 
 hypothesis_tests$prop_tests_sex_differences %>%
   filter(p.value < .05) %>%
