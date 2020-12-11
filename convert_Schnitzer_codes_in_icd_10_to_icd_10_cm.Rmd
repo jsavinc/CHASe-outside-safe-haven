@@ -282,6 +282,38 @@ gem_combined %>% filter(str_detect(icd9cm,"^E8694")) %>% mutate(icd10cm=str_sub(
 ## 
 gem_combined %>% filter(str_detect(icd9cm,"^E9800")) %>% mutate(icd10cm=str_sub(icd10cm,1,4)) %>% select(icd10cm) %>% distinct
 
+
+## Neurologic hereditary, degenerative, and other disorders
+map_df(
+  .x = paste0(330:344),
+  .f = ~find_icd10cm_equivalent(.x)
+) %>% arrange(icd10cm) %>% print(n=nrow(.))
+```
+
+## E988
+
+The 4th digit categories in ICD-9-CM were:
+
+`r tibble(icd9cm=paste0("E",9880:9889)) %>% group_by(icd9cm) %>% mutate(meaning=explain_code(icd9cm))`
+
+* jumping: `Y30, Y31`
+* burns or fire: `Y26, Y27`
+* scald: `Y27`
+* cold exposure: none
+* electrocution: none
+* crashing motor vehicle: `Y32`
+* crashing aircraft: none
+* caustic substances except poisoning: none
+* other specified means: ?
+* unspecified means: `Y33`
+
+
+For finding equivalents to the ICD-9-CM code E988, `E988 Injury by other and unspecified means, undetermined whether accidentally or purposely inflicted`, I consulted the tabular ICD-10-CM list available on the CDC website for keyword searching; beyond the sections above, I only found the following general code:
+
+* Y33 Other specified events, undetermined intent
+
+```{r}
+The codes are then `Y26, Y27, Y30, Y31, Y32, Y33`
 # the tribble below was made by using datapasta::tribble_paste()
 # datapasta::tribble_paste(input_table = codes_translated$inclusions %>% select(condition, icd9cm) %>% mutate(icd10cm = "", comment_icd10cm = ""))
 # datapasta::tribble_paste(input_table = inclusions_icd10cm %>% mutate_at(vars(icd10cm,comment_icd10cm), ~if_else(is.na(.),"",.)))
@@ -370,61 +402,48 @@ tibble::tribble(
                                                                          "Hypothyroidism",     "243–244.9",       "E00-E03, E89.0",   "E00-E03 congenital & acquired hypothyroidism; E89.0 postprocedural hypothyroidism",
                                                                       "Diabetes mellitus", "250.00–250.93",       "E08-E13",   "E08-E13 Diabetes mellitus",
                                                                   "Parathyroid disorders",   "252.0–252.9",       "E20, E21, E89.2",  "E20-E21 Parathyroid disorders; E89.0 Postprocedural hypoparathyroidism",
-                          "Disorders of the pituitary gland and its hypothalamic control",   "253.0–253.9",       "E22-E23, E89.3",               "E22 Hyperfunction of pituitary gland; E23 Hypofunction and other disorders of pituitary gland;	E89.2 Postprocedural hypoparathyroidism",
+                          "Disorders of the pituitary gland and its hypothalamic control",   "253.0–253.9",       "E22, E23, E89.3",               "E22 Hyperfunction of pituitary gland; E23 Hypofunction and other disorders of pituitary gland;	E89.2 Postprocedural hypoparathyroidism",
                                                             "Inborn errors of metabolism",   "270.0–275.9",       "E70-E88, D89, M10",   "E70-E90 Metabolic disorders; However, there's matches in other categories; D89 Other disorders involving the immune mechanism, not elsewhere classified; M10 Gout; E20.1 Pseudohypoparathyroidism already covered above",
                                                                     "Lactose intolerance",         "271.3",       "E73",               NA,
-                                                                        "Cystic fibrosis",        "277.00",       NA,               NA,
-                                                                     "Mental retardation",       "317–319",       NA,               NA,
-                               "Neurologic hereditary, degenerative, and other disorders",  "330.0–344.42",       NA,               NA,
-                                                               "Intracerebral hemorrhage",           "431",       NA,               NA,
-                                             "Polyarteritis nodosa and allied conditions",   "446.0–446.7",       NA,               NA,
-                                                                                 "Asthma", "493.00–493.92",       NA,               NA,
-                                                                "Gastroesophageal reflux",        "530.81",       NA,               NA,
-                                                             "Inflammatory bowel disease",   "555.0–558.9",       NA,               NA,
-                                                                        "Biliary disease",   "575.0–576.9",       NA,               NA,
-                                                                              "Cirrhosis",   "571.0–571.9",       NA,               NA,
-                                                               "Pancreatic insufficiency",         "577.8",       NA,               NA,
-                                                               "Intestinal malabsorption",   "579.0–579.9",       NA,               NA,
-                                                                 "Renal tubular acidosis",         "588.8",       NA,               NA,
-                                                            "Chronic renal insufficiency",         "593.9",       NA,               NA,
-                                                                "Urinary tract infection",         "599.0",       NA,               NA,
-                                                  "Diffuse diseases of connective tissue",   "710.0–710.9",       NA,               NA,
-                          "Rheumatoid arthritis and other inflammatory polyarthropathies",   "714.0–714.9",       NA,               NA,
-                                                            "Cardiac disease, congenital",   "745.0–747.9",       NA,               NA,
-                                                                 "Cleft palate/cleft lip", "749.00–749.25",       NA,               NA,
-                                                                       "Pyloric stenosis",         "750.5",       NA,               NA,
-                                                                 "Hirschsprung's disease",         "751.3",       NA,               NA,
-                                                              "Chromosomal abnormalities",   "758.0–758.9",       NA,               NA,
-                                                                 "Fetal alcohol syndrome",        "760.71",       NA,               NA,
-                                             "Birth trauma: subdural/cerebral hemorrhage",         "767.0",       NA,               NA,
-                                                             "Bronchopulmonary dysplasia",         "770.7",       NA,               NA,
-                                                                   "Perinatal infections",  "771.0–771.89",       NA,               NA,
-                                                            "Intraventricular hemorrhage", "772.10–772.14",       NA,               NA,
-     "Subarachnoid, subdural, extradural, other/unspecified, hemorrhage following injury", "852.00–853.19",       NA,               NA,
-                                                                         "Lead poisoning",   "984.0–984.9",       NA,               NA
+                                                                        "Cystic fibrosis",        "277.00",       "E84",               NA,
+                                                                     "Mental retardation",       "317–319",       "F70-F79",         "F70-F79 Intellectual disabilities",
+                               "Neurologic hereditary, degenerative, and other disorders",  "330.0–344.42",       "G00-G99, F84.2, R52",               "this range is composed of: HEREDITARY AND DEGENERATIVE DISEASES OF THE CENTRAL NERVOUS SYSTEM (330-337);  PAIN (338); OTHER HEADACHE SYNDROMES (339); OTHER DISORDERS OF THE CENTRAL NERVOUS SYSTEM (340-349) except 348-349, which covers Other conditions of brain and 349 Other and unspecified disorders of the nervous system; not clear why those were excluded - we'll cover the entire G00-G99 range; also matches R52 Pain and F84.2 Rett's syndrome; there are also a range of E75XX codes that are already captured above",
+                                                               "Intracerebral hemorrhage",           "431",       "I61",               NA,
+                                             "Polyarteritis nodosa and allied conditions",   "446.0–446.7",       "M30, M31",	"Polyarteritis nodosa and allied conditions to ICD-10 M30 Polyarteritis nodosa and related conditions and M31 Other necrotising vasculopathies",
+                                                                                 "Asthma", "493.00–493.92",       "J45",               NA,
+                                                                "Gastroesophageal reflux",        "530.81",       "K21",               NA,
+                                                             "Inflammatory bowel disease",   "555.0–558.9",       "K50-K52",               "Inflammatory bowel disease: NONINFECTIOUS ENTERITIS AND COLITIS (555-558) - Noninfective enteritis and colitis (K50-K52)",
+                                                                        "Biliary disease",   "575.0–576.9",       "K82-K83",               "K82 Other diseases of gallbladder; K83 Other diseases of biliary tract",
+                                                                              "Cirrhosis",   "571.0–571.9",       "K70-K76",               "K70-K76 Diseases of liver (K77 excluded - diseases of liver classified elsewhere)",
+                                                               "Pancreatic insufficiency",         "577.8",       "K86.8",               NA,
+                                                               "Intestinal malabsorption",   "579.0–579.9",       "K90, K91",               "K90 intestinal malabsorption; K91 Postprocedural disorders of digestive system, not elsewhere classified",
+                                                                 "Renal tubular acidosis",         "588.8",       "N25.8",               NA,
+                                                            "Chronic renal insufficiency",         "593.9",       "N18, N19, N28.9",               "Schnitzer specified Chronic renal insufficiency, but listed code 593.9 Disorders of kidney and ureter, unspecified; I'm assuming they mean the former, which maps to N18 & possibly N19, but we'll also include N28.9 Disorder of kidney and ureter, unspecified",
+                                                                "Urinary tract infection",         "599.0",       "N39.0",               NA,
+                                                  "Diffuse diseases of connective tissue",   "710.0–710.9",       "M32-M36",               "M32-M36  Systemic connective tissue disorders: based on matching ICD-9-CM code headings to ICD-10-CM & prefixes generated via GEMs",
+                          "Rheumatoid arthritis and other inflammatory polyarthropathies",   "714.0–714.9",       "M05, M06, M08, M12.0",               "based on GEMs, we also include M12.0 Chronic postrheumatic arthropathy",
+                                                            "Cardiac disease, congenital",   "745.0–747.9",       "Q20-Q28, P29.3",               "Q20-Q28 Congenital malformations of the circulatory system; also includes P29.3 Persistent foetal circulation",
+                                                                 "Cleft palate/cleft lip", "749.00–749.25",       "Q35, Q36, Q37",               NA,
+                                                                       "Pyloric stenosis",         "750.5",       "Q40.0",               NA,
+                                                                 "Hirschsprung's disease",         "751.3",       "Q43.1",               NA,
+                                                              "Chromosomal abnormalities",   "758.0–758.9",       "Q90-Q99",               "Q90-Q99 	Chromosomal abnormalities, not elsewhere classified",
+                                                                 "Fetal alcohol syndrome",        "760.71",       "Q86.0, P04.3",               "Q86.0 Fetal alcohol syndrome (dysmorphic); P04.3 Fetus and newborn affected by maternal use of alcohol",
+                                             "Birth trauma: subdural/cerebral hemorrhage",         "767.0",       "P10, P11.0, P11.2, P11.9, P52",               "GEM based: P10 Intracranial laceration and haemorrhage due to birth injury;  P11.0 Cerebral edema due to birth injury, P11.1 Other specified brain damage due to birth injury'; P11.2 Unspecified brain damage due to birth injury,  P11.9 Birth injury to central nervous system, unspecified,  P52 Intracranial nontraumatic hemorrhage of newborn",
+                                                             "Bronchopulmonary dysplasia",         "770.7",       "P27.1",               "Although the ICD-9-CM code is specified more widely (Chronic respiratory disease arising in the perinatal period), I've taken the more specific description for P27.1 Bronchopulmonary dysplasia originating in the perinatal period",
+                                                                   "Perinatal infections",  "771.0–771.89",       "P35-P39",               NA,
+                                                            "Intraventricular hemorrhage", "772.10–772.14",       "P10, P52",               "This is already covered above but I've spelled it out anyway for clarity!",
+     "Subarachnoid, subdural, extradural, other/unspecified, hemorrhage following injury", "852.00–853.19",       "S063-S068",               "I've interpreted this to mean any traumatic intracranial hemorrhage, and these are roughly covered in S063-S068",
+                                                                         "Lead poisoning",   "984.0–984.9",       "T56.0",               NA
+     )
+
+additional_requirements_icd10cm <-
+# datapasta::tribble_paste(input_table = codes_translated$additional_requirements %>% select(icd9cm) %>% mutate(icd10cm = "", comment_icd10cm = "") %>% distinct)
+tibble::tribble(
+            ~icd9cm, ~icd10cm, ~comment_icd10cm,
+      "480.0–487.8",       "J10-J18",               "pneumonia & influenza (not avian) - I excluded J09 as that's what avian influenza falls under",
+      "490.0–491.9",       "J40, J41, J42",               "chronic bronchitis & bronchitis not specified as acute or chronic",
+     "466.0–466.19",       "J20, J21, J68",               "Acute bronchitis and bronchiolitis; added ICD-10 J68 respiratory conditions due to exposure to chemicals",
+      "493.0–493.9",       "J45",               "Asthma",
+      "381.0–381.4",       "H65, H66",               "Otitis media was specified in Schnitzer et al., 2011, so that's what I searched for in ICD-10-CM"
      )
 ```
-
-## E988
-
-The 4th digit categories in ICD-9-CM were:
-
-`r tibble(icd9cm=paste0("E",9880:9889)) %>% group_by(icd9cm) %>% mutate(meaning=explain_code(icd9cm))`
-
-* jumping: `Y30, Y31`
-* burns or fire: `Y26, Y27`
-* scald: `Y27`
-* cold exposure: none
-* electrocution: none
-* crashing motor vehicle: `Y32`
-* crashing aircraft: none
-* caustic substances except poisoning: none
-* other specified means: ?
-* unspecified means: `Y33`
-
-
-For finding equivalents to the ICD-9-CM code E988, `E988 Injury by other and unspecified means, undetermined whether accidentally or purposely inflicted`, I consulted the tabular ICD-10-CM list available on the CDC website for keyword searching; beyond the sections above, I only found the following general code:
-
-* Y33 Other specified events, undetermined intent
-
-The codes are then `Y26, Y27, Y30, Y31, Y32, Y33`
