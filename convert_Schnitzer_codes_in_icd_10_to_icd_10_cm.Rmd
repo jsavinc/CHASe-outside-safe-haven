@@ -16,9 +16,11 @@ bibliography: bibliography.bib
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
 # Introduction
 
 The aim of this document is to produce an updated list of codes suggestive of maltreatment [@schnitzer_2011] - these were originally compiled for ICD-9-CM, and as part of the CHASe study [@dougall_2020] I translated them to ICD-9 and ICD-10, but for its use with US data, an ICD-10-CM version is needed.
+
 
 # Libraries
 
@@ -30,6 +32,7 @@ library(icd)
 library(knitr)
 library(readxl)
 ```
+
 
 ## `icd` settings
 
@@ -97,6 +100,11 @@ codes_translated <-
   ) %>% set_names(x = ., nm = excel_sheets(previously_translated_codes_file))
 ```
 
+# Strategies
+
+* looking up chapters, e.g. see here for [https://icd.codes/icd10cm/chapter19](chapter 19 of ICD-10-CM, version 2016)
+
+
 # First attempt - load codes as-is
 
 ```{r}
@@ -107,8 +115,27 @@ codes_translated$inclusions %>%
     # icd10cm = explain_code(icd10who)
     )
 
+## helper function to find ICD-10-CM equivalents in the GEM for ICD-9-CM codes
+## icd9cm_code is an ICD-9-CM given as a character string or number, and include decimal dot
+## character_depth indicates how detailed codes to display, default is 4 e.g. S12.1
+## this finds both forward & backward matches to the icd-9-cm code, truncates the matches to the requested number of characters, and shows unique matches & their descriptions
+find_icd10cm_equivalent <- function(icd9cm_code, character_depth = 4) {
+  icd9cm_code <- str_remove_all(string = icd9cm_code, pattern="\\.")
+  gem_combined %>% 
+    filter(str_detect(icd9cm, paste0("^",icd9cm_code))) %>% 
+    select(icd10cm) %>%
+    mutate(
+      icd10cm = str_sub(icd10cm, 1, character_depth),
+      ) %>% 
+    distinct %>% 
+    group_by(icd10cm) %>%
+    summarise(meaning = icd::explain_code(as.icd10cm(str_remove_all(icd10cm, pattern = "X")))) %>%
+    arrange(icd10cm)
+}
+
 icd::explain_code("614.9")
-icd::explain_code("N73")
+find_icd10cm_equivalent("614.9")
+icd::explain_code("N739")
 
 
 icd::explain_code("9224")
@@ -121,7 +148,7 @@ icd::explain_code("Z044")
 icd::explain_code("V7181")
 icd::explain_code("Z047")
 icd::explain_code("Z0471")
-icd::explain_code("Z047")
+icd::explain_code("Z0472")
 gem_combined %>% filter(str_detect(icd9cm,"V7181"))
 
 ## retinal haemorrhage
@@ -143,22 +170,31 @@ icd::explain_code("S421")
 icd::explain_code("8522")
 icd::explain_code("8523")
 icd::explain_code("S065")
+find_icd10cm_equivalent("8522")
+
+# other/unspecified intracranial hemmorh
+icd::explain_code("853")
+icd::explain_code("8530")
+find_icd10cm_equivalent("853")
+icd::explain_code("S068")
 icd::explain_code("S06893")
+
 
 ## stomach injury originally specified as injury with open wound but not in description so i think we can translate to more general code
 icd::explain_code("8631")
 icd::explain_code("S363")
 
 ## assault
-icd::explain_code("E965")
+icd::explain_code("E965")  # firearms
 icd::explain_code("X93")
 icd::explain_code("X94")
 icd::explain_code("X95")
 icd::explain_code("X96")
-icd::explain_code("E966")
+icd::explain_code("E966")  # cutting/piercing
 icd::explain_code("X99")
-icd::explain_code("E9682")
+icd::explain_code("E9682")  # blunt/thrown object
 icd::explain_code("Y00")
+gem_combined %>% filter(str_detect(icd9cm,"^E965")) %>% mutate(icd10cm=str_sub(icd10cm,1,4)) %>% select(icd10cm) %>% distinct
 ## assault NOS
 icd::explain_code("E9689")
 icd::explain_code("Y09")
@@ -166,16 +202,229 @@ icd::explain_code("Y09")
 # TODO: this needs looking into!
 ## undet intent other means
 icd::explain_code("E988")
+gem_combined %>% filter(str_detect(icd9cm,"^E988")) %>% mutate(icd10cm=str_sub(icd10cm,1,4)) %>% select(icd10cm) %>% distinct
+gem_combined %>% filter(str_detect(icd9cm,"^E988")) %>% mutate(icd10cm=str_sub(icd10cm,1,4)) %>% select(icd10cm) %>% distinct %>% group_by(icd10cm) %>% summarise(icd10cm = str_replace_all(icd10cm, pattern="X", replacement = ""), meaning = explain_code(icd10cm))
+# find_icd10cm_equivalent("E988")
 icd::explain_code("Y26")
 
 # TODO: this is also complicated - icd-10 splits vertebrae across body systems
 # vertebral fracture
 icd::explain_code("805")
+find_icd10cm_equivalent(805)
+
+mutate(meaning = icd::explain_code(icd10cm))
 icd::explain_code("S12")
 # S12.0,S12.1,S12.2,S12.7,S12.9,S22.0,S22.1,S32.0,S32.7
-icd::explain_code("S121")
+
+explain_code("852")
+find_icd10cm_equivalent(icd9cm_code = "852")
+
+## intrathoracic injury NEC
+explain_code("862")
+find_icd10cm_equivalent(icd9cm_code = "862")
+
+## small intestine injury
+explain_code("8632")
+explain_code("8633")
+find_icd10cm_equivalent(icd9cm_code = "8632")
+find_icd10cm_equivalent(icd9cm_code = "8633")
+
+## spleen injury
+explain_code("865")
+find_icd10cm_equivalent(icd9cm_code = "865")
+
+## spinal cord injury
+explain_code("952")
+find_icd10cm_equivalent(icd9cm_code = "952")
+tibble(code=c("S14.0", "S14.1", "S24.0", "S24.1", "S34.0", "S34.1", "S34.3", "T06.0", "T06.1", "T09.3")) %>% group_by(code) %>% summarise(explain_code(code))
+# NOTE:  S34.3 should probably be included in the ICD-10 codes also!
+
+# malnutrition
+explain_code("262")
+# find_icd10cm_equivalent("262")
+gem_combined %>% filter(str_detect(icd9cm,"^262")) %>% mutate(icd10cm=str_sub(icd10cm,1,4)) %>% select(icd10cm) %>% distinct
+
+# caries
+explain_code("5210")
+find_icd10cm_equivalent("5210")
+explain_code("K02")
+
+# Solar radiation dermatitis ("Contact dermatitis and other eczema due to solar radiation")
+explain_code("6927")
+find_icd10cm_equivalent("6927")
+explain_code("L578")
+
+# pelvic fract
+explain_code("808")
+find_icd10cm_equivalent("808")
+tibble(code=paste0("S",320:329)) %>% group_by(code) %>% summarise(explain_code(code))
+explain_code("S32")
+explain_code("S321") # sacrum
+explain_code("S322") # coccyx
 
 
+# Traumatic pneumohemothorax
+explain_code("860")
+find_icd10cm_equivalent("860")
+
+# heart or lung inj
+explain_code("861")
+find_icd10cm_equivalent("861")
+explain_code("S26")
+explain_code("S273")
+explain_code("S274")
+explain_code("S275")
+explain_code("S276")
+
+## I just did the rest by fly here, except for a few more...
+## 2nd hand smoke - this actually exists but you need to find it by keyword
+gem_combined %>% filter(str_detect(icd9cm,"^E8694")) %>% mutate(icd10cm=str_sub(icd10cm,1,4)) %>% select(icd10cm) %>% distinct
+## 
+gem_combined %>% filter(str_detect(icd9cm,"^E9800")) %>% mutate(icd10cm=str_sub(icd10cm,1,4)) %>% select(icd10cm) %>% distinct
+
+# the tribble below was made by using datapasta::tribble_paste()
+# datapasta::tribble_paste(input_table = codes_translated$inclusions %>% select(condition, icd9cm) %>% mutate(icd10cm = "", comment_icd10cm = ""))
+# datapasta::tribble_paste(input_table = inclusions_icd10cm %>% mutate_at(vars(icd10cm,comment_icd10cm), ~if_else(is.na(.),"",.)))
+inclusions_icd10cm <- tibble::tribble(
+                                      ~condition,              ~icd9cm, ~icd10cm, ~comment_icd10cm,
+                                "Genital herpes",              "054.1",       "A60",            "",
+                          "Gonococcal infection",                "098",       "A54",            "",
+      "Pelvic inflammatory disease, unspecified",              "614.9",       "N73.9",          "not sure the same conditions were grouped as unspecified between ICD-9-CM and ICD-10-CM",
+                   "Contusion of genital organs",              "922.4",       "S30.2",          "",
+                "Observation after alleged rape",              "V71.5",       "Z04.4",          "",
+                 "Observation for abuse/neglect",             "V71.81",       "Z04.7",          "No equivalent in ICD-10; ICD-10-CM specifies 'physical abuse', whereas ICD-9-CM specifies 'suspected abuse & neglect'.",
+                            "Retinal hemorrhage",             "362.81",       "H35.6",          "No equivalent in ICD-9;",
+                                  "Rib fracture",       "807.0, 807.1",       "S22.3, S22.4",   "ICD-10-CM doesn't specify open or closed fracture unlike ICD-9-CM.",
+                              "Scapula fracture",                "811",       "S42.1",           "",
+                 "Traumatic subdural hemorrhage",              "852.2",       "S06.5",            "ICD-9-CM specifies 'no mention of open intracranial wound'; ICD-10-CM doesn't make that distinction.",
+     "Other/unspecified intracranial hemorrhage",              "853.0",       "S06.8",               NA,
+                                "Stomach injury",              "863.1",       "S36.3",               "ICD-9-CM specified open wound into cavity; I've useda the more general ICD-10-CM code for stomach injury.",
+                                       "Assault", "E965, E966, E968.2",       "X93-X96, X99, Y00",               "",
+                                  "Assault, NOS",             "E968.9",       "Y09",               "",
+              "Undetermined intent, other means",               "E988",       "Y26, Y27, Y30, Y31, Y32, Y33",               "Several modalities of injury that were coded as 'other or unspecified' in ICD-9-CM have their own 3-character codes in ICD-10-CM",
+                          "Skull vault fracture",                "800",       "S02.0",          NA,
+                            "Vertebral fracture",                "805",       "S12, S22.0",               "Note: the description in Schnitzer et al. (2011) says 'Vertebral fracture', even though the provided Code ICD-9-CM 805 is for cervical vertebral fractures specifically. I interpreted this going by description so thoracic vertebrae are included; the later inclusion for Pelvic fracture covers lumbar vertebrae in the same spirit.",
+             "Traumatic subarachnoid hemorrhage",              "852.0",       "S06.6",               "",
+                     "Intrathoracic injury, NEC",                "862",       "S27.8, S27.9",               NA,
+                        "Small intestine injury",       "863.2, 863.3",       "S36.4",               NA,
+                                 "Spleen injury",                "865",       "S36.0",               NA,
+                            "Spinal cord injury",                "952",       "S14.0, S14.1, S24.0, S24.1, S34.0, S34.1, S34.3",               "In ICD-9-CM, spinal cord injury locations are specified at 4th digit level; in ICD-10-CM they are specified with separate 3-character codes, grouped by body systems.",
+                     "Other severe malnutrition",                "262",       "E43",               NA,
+                                 "Dental caries",              "521.0",       "K02",               NA,
+                    "Solar radiation dermatitis",              "692.7",       "L57.8",               NA,
+                               "Pelvic fracture",                "808",       "S32",               "ICD-10-CM includes lumbar vertebrae with pelvic fractures, this is included to go with the broad interpertation of the above code for vertebral fractures.",
+                    "Traumatic pneumohemothorax",                "860",       "S27.0, S27.1, S27.2",               "The description given in Schnitzer et al. (2011) says 'Traumatic pneumothorax', but the provided ICD-9-CM code includes hemothorax also, so this was included.",
+                          "Heart or lung injury",                "861",       "S26, S27.3, S27.4, S27.5, S27.6",               "ICD-10 groups lung injuries and intrathoracic injuries together, so only lung-related codes in S27 are included.",
+                                "GI injury, NEC",              "863.8",       "S36.2, S36.8, S36.9",               "ICD-9 separately specifies 4th digit codes for stomach, small intenstine, colon or rectum, so to match the Other code we include ICD-10 codes for gastrointestinal injuries excluded by those
+",
+                                  "Liver injury",                "864",       "S36.1",               NA,
+                                 "Kidney injury",                "866",       "S37.0",               NA,
+                                  "Burn of head",                "941",       "T20",               NA,
+                                 "Burn of trunk",                "942",       "T21",               NA,
+                                   "Burn of leg",                "945",       "T24, T25",               "ICD-10-CM treats ankle and foot as a separate code so that's included",
+                        "Burn of multiple sites",                "946",       NA,               "ICD-10-CM denotes multiple burn sites as a 6th digit, specifying for each individual burn site that there are other burn sites present; These cases are already covered by the other codes denoting burns!",
+                 "Poisoning by drugs/medicinals",            "960-979",       "T36-T50",               NA,
+                "Drowning, non-fatal submersion",              "994.1",       "T75.1",               NA,
+                     "Second-hand tobacco smoke",             "E869.4",       "Z77.22",               "Different code to ICD-10!",
+                             "Swimming accident",             "E910.2",       "W68, W69",               NA,
+                       "Bathtub (near) drowning",             "E910.4",       "W65",               NA,
+                         "Other (near) drowning",             "E910.8",       "W73",               NA,
+               "Accidental (near) drowning, NOS",             "E910.9",       "W74",               NA,
+                          "Unarmed fight, brawl",             "E960.0",       "Y04",               "Y04 in ICD-10-CM is slightly more widely defined than E960.0 in ICD-9-CM but it conceptually matches the description.",
+                "Undetermined intent, poisoning",               "E980",       "T36-T50*",               "Undetermined intent in ICD-10-CM is denoted by 6th character '4' in poisoning codes T36-T50",
+                  "Undetermined intent, firearm",               "E985",       "Y22, Y23, Y24, Y25",               NA,
+                       "Household circumstances",                "V60",       "Z59",               NA
+     )
+
+exclusion_icd10cm <-
+# datapasta::tribble_paste(input_table = codes_translated$exclusions %>% select(icd9cm) %>% mutate(icd10cm = "", comment_icd10cm = "") %>% distinct)
+tibble::tribble(
+                     ~icd9cm, ~icd10cm, ~comment_icd10cm,
+                       "767",       "P10-P15, P52.4, P52.6, P52.8, P52.9", "ICD-10 codes for Birth trauma plus several codes for non-traumatic brain haemorrhages that were included in ICD-9-CM 767 birth trauma due to hypoxia/anoxia (but excluding intraventricular & subarachnoid haemorrhages which werent included in ICD-9-CM code 767)",
+                       "765",       "P07",               "Disorders relating to short gestation and low birthweight",
+                     "771.2",       "P352",               "Congenital herpes simplex",
+                     "098.4",       "A543",               "Gonococcal infection of eye",
+                     "771.6",       "P391",               "Neonatal conjunctivitis and dacryocystitis",
+                    "756.51",       "Q780",               "Osteogenesis imperfecta",
+                    "E960.1",       "T74.2",               "ICD-9-CM E960.1 Rape mapped to T74.2 Sexual abuse",
+                    "E968.4",       "Y07, X58",             "ICD-9-CM 'Assault by criminal neglect' maps to ICD-10-CM code X58 Exposure to other specified factors (which is used for neglect); also Y07 is for denoting the perpetrator of assault, maltreatment and neglect",
+                   "286–287",       "D65-D69",               "Coagulation, purpura, & haemorrhagic disorders",
+                 "E800–E819",       "V01-V99",               "MVA - motor vehicle accidents; these are defined more broadly in ICD-10-CM ('Transport accidents') than ICD-9-CM but that's acceptable.",
+                 "E890–E897",       "X00-X08",               "ICD-9-CM ACCIDENTS CAUSED BY FIRE AND FLAMES (but excluding Other & NOS codes) mapped to ICD-10-CM Exposure to smoke, fire and flames",
+                 "E870–E876",       "Y62-Y69",               "Misadventures during medical care",
+             "733.10–733.19",       "M84.4, M84.5, M84.6, M80.0",               "This is specified as a range but captures entire range of ICD-9-CM 733.1 for Pathological fracture; this includes M80.0 for Age-related osteoporosis with current pathological fracture",
+     "E810–E813, E815–E819b",       "V20-V99",               "ICD-9 MOTOR VEHICLE TRAFFIC ACCIDENTS (E810-E819) excluding cases where child was pedestrian or cyclist (.6 or .7); ICD-10 transport accidents except ones where victim was pedestrian or pedal cyclist (i.e. V01-V19); this includes motorcycle rider injuries V20-V29 - these should be considered as indicative of neglect for children <10 y.o.!"
+     )
+
+
+
+malnutrition_exclusions_icd10cm <-
+# datapasta::tribble_paste(input_table = codes_translated$malnutrition_exclusions %>% select(condition, icd9cm) %>% mutate(icd10cm = "", comment_icd10cm = "") %>% distinct)
+tibble::tribble(
+                                                                               ~condition,         ~icd9cm, ~icd10cm, ~comment_icd10cm,
+                                               "Infections of the gastrointestinal tract",         "009.0",       "A09",     "Infectious gastroenteritis and colitis, unspecified",
+                                                                           "Tuberculosis",   "010.0–018.9",       "A15-A19",  "A15-A19 Tubercolosis",
+                                                                            "HIV disease",           "042",       "B20", 	    "B20 HIV",
+                                                                        "Viral hepatitis",  "070.00–070.9",       "B15-B19",  "B15-B19 	Viral hepatitis",
+                                                                             "Malignancy",  "140.0–208.91",       "C00-C96, C7A, C7B",        "Covers entire C__ range of malignant neoplasms",
+                                                                         "Hypothyroidism",     "243–244.9",       "E00-E03, E89.0",   "E00-E03 congenital & acquired hypothyroidism; E89.0 postprocedural hypothyroidism",
+                                                                      "Diabetes mellitus", "250.00–250.93",       "E08-E13",   "E08-E13 Diabetes mellitus",
+                                                                  "Parathyroid disorders",   "252.0–252.9",       "E20, E21, E89.2",  "E20-E21 Parathyroid disorders; E89.0 Postprocedural hypoparathyroidism",
+                          "Disorders of the pituitary gland and its hypothalamic control",   "253.0–253.9",       "E22-E23, E89.3",               "E22 Hyperfunction of pituitary gland; E23 Hypofunction and other disorders of pituitary gland;	E89.2 Postprocedural hypoparathyroidism",
+                                                            "Inborn errors of metabolism",   "270.0–275.9",       "E70-E88, D89, M10",   "E70-E90 Metabolic disorders; However, there's matches in other categories; D89 Other disorders involving the immune mechanism, not elsewhere classified; M10 Gout; E20.1 Pseudohypoparathyroidism already covered above",
+                                                                    "Lactose intolerance",         "271.3",       "E73",               NA,
+                                                                        "Cystic fibrosis",        "277.00",       NA,               NA,
+                                                                     "Mental retardation",       "317–319",       NA,               NA,
+                               "Neurologic hereditary, degenerative, and other disorders",  "330.0–344.42",       NA,               NA,
+                                                               "Intracerebral hemorrhage",           "431",       NA,               NA,
+                                             "Polyarteritis nodosa and allied conditions",   "446.0–446.7",       NA,               NA,
+                                                                                 "Asthma", "493.00–493.92",       NA,               NA,
+                                                                "Gastroesophageal reflux",        "530.81",       NA,               NA,
+                                                             "Inflammatory bowel disease",   "555.0–558.9",       NA,               NA,
+                                                                        "Biliary disease",   "575.0–576.9",       NA,               NA,
+                                                                              "Cirrhosis",   "571.0–571.9",       NA,               NA,
+                                                               "Pancreatic insufficiency",         "577.8",       NA,               NA,
+                                                               "Intestinal malabsorption",   "579.0–579.9",       NA,               NA,
+                                                                 "Renal tubular acidosis",         "588.8",       NA,               NA,
+                                                            "Chronic renal insufficiency",         "593.9",       NA,               NA,
+                                                                "Urinary tract infection",         "599.0",       NA,               NA,
+                                                  "Diffuse diseases of connective tissue",   "710.0–710.9",       NA,               NA,
+                          "Rheumatoid arthritis and other inflammatory polyarthropathies",   "714.0–714.9",       NA,               NA,
+                                                            "Cardiac disease, congenital",   "745.0–747.9",       NA,               NA,
+                                                                 "Cleft palate/cleft lip", "749.00–749.25",       NA,               NA,
+                                                                       "Pyloric stenosis",         "750.5",       NA,               NA,
+                                                                 "Hirschsprung's disease",         "751.3",       NA,               NA,
+                                                              "Chromosomal abnormalities",   "758.0–758.9",       NA,               NA,
+                                                                 "Fetal alcohol syndrome",        "760.71",       NA,               NA,
+                                             "Birth trauma: subdural/cerebral hemorrhage",         "767.0",       NA,               NA,
+                                                             "Bronchopulmonary dysplasia",         "770.7",       NA,               NA,
+                                                                   "Perinatal infections",  "771.0–771.89",       NA,               NA,
+                                                            "Intraventricular hemorrhage", "772.10–772.14",       NA,               NA,
+     "Subarachnoid, subdural, extradural, other/unspecified, hemorrhage following injury", "852.00–853.19",       NA,               NA,
+                                                                         "Lead poisoning",   "984.0–984.9",       NA,               NA
+     )
 ```
 
+## E988
 
+The 4th digit categories in ICD-9-CM were:
+
+`r tibble(icd9cm=paste0("E",9880:9889)) %>% group_by(icd9cm) %>% mutate(meaning=explain_code(icd9cm))`
+
+* jumping: `Y30, Y31`
+* burns or fire: `Y26, Y27`
+* scald: `Y27`
+* cold exposure: none
+* electrocution: none
+* crashing motor vehicle: `Y32`
+* crashing aircraft: none
+* caustic substances except poisoning: none
+* other specified means: ?
+* unspecified means: `Y33`
+
+
+For finding equivalents to the ICD-9-CM code E988, `E988 Injury by other and unspecified means, undetermined whether accidentally or purposely inflicted`, I consulted the tabular ICD-10-CM list available on the CDC website for keyword searching; beyond the sections above, I only found the following general code:
+
+* Y33 Other specified events, undetermined intent
+
+The codes are then `Y26, Y27, Y30, Y31, Y32, Y33`
