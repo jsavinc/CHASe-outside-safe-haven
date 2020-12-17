@@ -100,12 +100,15 @@ codes_translated <-
   ) %>% set_names(x = ., nm = excel_sheets(previously_translated_codes_file))
 ```
 
-# Strategies
 
-* looking up chapters, e.g. see here for [https://icd.codes/icd10cm/chapter19](chapter 19 of ICD-10-CM, version 2016)
+# Translation
 
+I've combined the following sources of information:
 
-# First attempt - load codes as-is
+* General Equivalence Mappings (GEM) - these were searched for the matching ICD-9-CM code, and then the forwad & backward matches were combined, usually up to 4 characters long (ICD-10-CM includes a lot of detail in characters paste the 4th)
+* the use of the `icd` package in R, specifically the function `explain_code()` in combination with e.g. `as.icd9cm()` to specify which ICD version code was being supplied;
+* looking up ICD-10-CM chapters online, e.g. see here for [chapter 19 of ICD-10-CM, version 2016)](https://icd.codes/icd10cm/chapter19)
+
 
 ```{r}
 codes_translated$inclusions %>%
@@ -132,7 +135,13 @@ find_icd10cm_equivalent <- function(icd9cm_code, character_depth = 4) {
     summarise(meaning = icd::explain_code(as.icd10cm(str_remove_all(icd10cm, pattern = "X")))) %>%
     arrange(icd10cm)
 }
+```
 
+## Checking through codes
+
+The below contains the results of my checking through codes, without much commentary.
+
+```{r}
 icd::explain_code("614.9")
 find_icd10cm_equivalent("614.9")
 icd::explain_code("N739")
@@ -282,7 +291,6 @@ gem_combined %>% filter(str_detect(icd9cm,"^E8694")) %>% mutate(icd10cm=str_sub(
 ## 
 gem_combined %>% filter(str_detect(icd9cm,"^E9800")) %>% mutate(icd10cm=str_sub(icd10cm,1,4)) %>% select(icd10cm) %>% distinct
 
-
 ## Neurologic hereditary, degenerative, and other disorders
 map_df(
   .x = paste0(330:344),
@@ -312,8 +320,13 @@ For finding equivalents to the ICD-9-CM code E988, `E988 Injury by other and uns
 
 * Y33 Other specified events, undetermined intent
 
+In conclusion, the codes are then `Y26, Y27, Y30, Y31, Y32, Y33`.
+
+## Defining the translations to ICD-10-CM
+
+Below I've used the `tibble:tribble()` function to define the tables of translations by hand, in combination with the `datapasta::tribble_paste()` function which pastes a requested table into a format for hand editing.
+
 ```{r}
-The codes are then `Y26, Y27, Y30, Y31, Y32, Y33`
 # the tribble below was made by using datapasta::tribble_paste()
 # datapasta::tribble_paste(input_table = codes_translated$inclusions %>% select(condition, icd9cm) %>% mutate(icd10cm = "", comment_icd10cm = ""))
 # datapasta::tribble_paste(input_table = inclusions_icd10cm %>% mutate_at(vars(icd10cm,comment_icd10cm), ~if_else(is.na(.),"",.)))
@@ -447,3 +460,7 @@ tibble::tribble(
       "381.0–381.4",       "H65, H66",               "Otitis media was specified in Schnitzer et al., 2011, so that's what I searched for in ICD-10-CM"
      )
 ```
+
+# Compiling translated codes
+
+The above listed codes are specified in a compact format, using code ranges such as C00-C97, for example. In addition to that, some codes are excluded on the basis of having a particular 6th character code in ICD-10. In order to 
