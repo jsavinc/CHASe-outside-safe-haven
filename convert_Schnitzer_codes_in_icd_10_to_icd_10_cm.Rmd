@@ -225,7 +225,6 @@ icd::explain_code("Y26")
 icd::explain_code("805")
 find_icd10cm_equivalent(805)
 
-mutate(meaning = icd::explain_code(icd10cm))
 icd::explain_code("S12")
 # S12.0,S12.1,S12.2,S12.7,S12.9,S22.0,S22.1,S32.0,S32.7
 
@@ -475,12 +474,17 @@ The above listed codes are specified in a compact format, using code ranges such
 ## Compact listing
 
 ```{r}
+translations_icd10cm$inclusions <-
+  translations_icd10cm$inclusions %>%
+  left_join(schnitzer_age_requirements, by="inclusion_index") %>%
+  left_join(schnitzer_code_categories, by="inclusion_index")
+
 codes_translated_including_icd10cm <- 
   imap(
     .x = codes_translated,
     .f = ~left_join(x = .x, y = translations_icd10cm[[.y]])
   )
-
+## save as excel file
 openxlsx::write.xlsx(x = codes_translated_including_icd10cm, file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_including_ICD-10-CM.xlsx")
 ```
 
@@ -623,7 +627,7 @@ codes_cleaned$additional_requirements <-
 iwalk(
   .x = codes_cleaned,
   .f = function(x,name) {
-    filepath = paste0("./archived/processed_ICD_codes/codes_schnitzer2011_icd10cm_",name,".csv")
+    filepath = paste0("./processed_ICD_codes/codes_schnitzer2011_icd10cm_",name,".csv")
     write_csv(x = x, path = filepath)
   }
 )

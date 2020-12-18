@@ -1,0 +1,106 @@
+inclusion_index,inclusion_code,regex_prefix,age_less_than,maltreatment_category
+1,A60,^A60,10,sexual maltreatment
+2,A54,^A54,10,sexual maltreatment
+3,N73.9,^N739,10,sexual maltreatment
+4,S30.2,^S302,10,sexual maltreatment
+5,Z04.4,^Z044,10,sexual maltreatment
+6,Z04.7,^Z047,10,sexual maltreatment
+7,H35.6,^H356,3,physical maltreatment
+8,S22.3,^S223,5,physical maltreatment
+8,S22.4,^S224,5,physical maltreatment
+9,S42.1,^S421,5,physical maltreatment
+10,S06.5,^S065,5,physical maltreatment
+11,S06.8,^S068,5,physical maltreatment
+12,S36.3,^S363,10,physical maltreatment
+13,X93-X96,^X93,4,physical maltreatment
+13,X93-X96,^X94,4,physical maltreatment
+13,X93-X96,^X95,4,physical maltreatment
+13,X93-X96,^X96,4,physical maltreatment
+13,X99,^X99,4,physical maltreatment
+13,Y00,^Y00,4,physical maltreatment
+14,Y09,^Y09,4,physical maltreatment
+15,Y26,^Y26,10,physical maltreatment
+15,Y27,^Y27,10,physical maltreatment
+15,Y30,^Y30,10,physical maltreatment
+15,Y31,^Y31,10,physical maltreatment
+15,Y32,^Y32,10,physical maltreatment
+15,Y33,^Y33,10,physical maltreatment
+16,S02.0,^S020,5,neglect or physical maltreatment
+17,S12,^S12,5,neglect or physical maltreatment
+17,S22.0,^S220,5,neglect or physical maltreatment
+18,S06.6,^S066,5,neglect or physical maltreatment
+19,S27.8,^S278,5,neglect or physical maltreatment
+19,S27.9,^S279,5,neglect or physical maltreatment
+20,S36.4,^S364,5,neglect or physical maltreatment
+21,S36.0,^S360,5,neglect or physical maltreatment
+22,S14.0,^S140,3,neglect or physical maltreatment
+22,S14.1,^S141,3,neglect or physical maltreatment
+22,S24.0,^S240,3,neglect or physical maltreatment
+22,S24.1,^S241,3,neglect or physical maltreatment
+22,S34.0,^S340,3,neglect or physical maltreatment
+22,S34.1,^S341,3,neglect or physical maltreatment
+22,S34.3,^S343,3,neglect or physical maltreatment
+23,E43,^E43,10,neglect
+24,K02,^K02,10,neglect
+25,L57.8,^L578,2,neglect
+26,S32,^S32,5,neglect
+27,S27.0,^S270,5,neglect
+27,S27.1,^S271,5,neglect
+27,S27.2,^S272,5,neglect
+28,S26,^S26,5,neglect
+28,S27.3,^S273,5,neglect
+28,S27.4,^S274,5,neglect
+28,S27.5,^S275,5,neglect
+28,S27.6,^S276,5,neglect
+29,S36.2,^S362,5,neglect
+29,S36.8,^S368,5,neglect
+29,S36.9,^S369,5,neglect
+30,S36.1,^S361,5,neglect
+31,S37.0,^S370,5,neglect
+32,T20,^T20,5,neglect
+33,T21,^T21,5,neglect
+34,T24,^T24,5,neglect
+34,T25,^T25,5,neglect
+36,T36-T50a,^T36..[^4],5,neglect
+36,T36-T50a,^T37..[^4],5,neglect
+36,T36-T50a,^T38..[^4],5,neglect
+36,T36-T50a,^T39..[^4],5,neglect
+36,T36-T50a,^T40..[^4],5,neglect
+36,T36-T50a,^T41..[^4],5,neglect
+36,T36-T50a,^T42..[^4],5,neglect
+36,T36-T50a,^T43..[^4],5,neglect
+36,T36-T50a,^T44..[^4],5,neglect
+36,T36-T50a,^T45..[^4],5,neglect
+36,T36-T50a,^T46..[^4],5,neglect
+36,T36-T50a,^T47..[^4],5,neglect
+36,T36-T50a,^T48..[^4],5,neglect
+36,T36-T50a,^T49..[^4],5,neglect
+36,T36-T50a,^T50..[^4],5,neglect
+37,T75.1,^T751,4,neglect
+38,Z77.22,^Z7722,10,neglect
+39,W68,^W68,4,neglect
+39,W69,^W69,4,neglect
+40,W65,^W65,4,neglect
+41,W73,^W73,4,neglect
+42,W74,^W74,4,neglect
+43,Y04,^Y04,4,neglect
+44,T36-T50b,^T36..4,5,neglect
+44,T36-T50b,^T37..4,5,neglect
+44,T36-T50b,^T38..4,5,neglect
+44,T36-T50b,^T39..4,5,neglect
+44,T36-T50b,^T40..4,5,neglect
+44,T36-T50b,^T41..4,5,neglect
+44,T36-T50b,^T42..4,5,neglect
+44,T36-T50b,^T43..4,5,neglect
+44,T36-T50b,^T44..4,5,neglect
+44,T36-T50b,^T45..4,5,neglect
+44,T36-T50b,^T46..4,5,neglect
+44,T36-T50b,^T47..4,5,neglect
+44,T36-T50b,^T48..4,5,neglect
+44,T36-T50b,^T49..4,5,neglect
+44,T36-T50b,^T50..4,5,neglect
+45,Y22,^Y22,10,neglect
+45,Y23,^Y23,10,neglect
+45,Y24,^Y24,10,neglect
+45,Y25,^Y25,10,neglect
+46,Z59,^Z59,10,neglect

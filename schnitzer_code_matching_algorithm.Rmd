@@ -1,0 +1,255 @@
+---
+title: Match inclusion & exclusion ICD codes from Schnitzer et al. (2011) translated to ICD-10-CM to a sample dataset 
+author: "Jan Savinc"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+  toc: true
+  toc_float: true
+  code_folding: hide
+editor_options: 
+  chunk_output_type: console
+bibliography: bibliography.bib
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Introduction
+
+The aim of this document is to serve as an example of the use of codes suggestive of maltreatment [@schnitzer_2011] translated to ICD-10-CM for use with medical records in the US. The algorithm used for matching inclusion & exclusion codes is shown.
+
+The original codes [@schnitzer_2011] were originally compiled for ICD-9-CM, and as part of the CHASe study [@dougall_2020] I translated them to ICD-9 and ICD-10; I later translated them to ICD-10-CM also!
+
+
+# Libraries
+
+```{r}
+library(tidyverse)  # for tidyverse-style code
+library(knitr)  # for printing tables
+library(fuzzyjoin)  # for regular expression joins
+library(tictoc)  # for timing
+```
+
+# Load data
+
+```{r}
+tic()  # start timing
+
+admissions <- read_csv("../Collaborations/translated_to_icd10cm/Sample Set of Simulated 3 Yrs of Encounters.csv") %>% 
+  mutate(episode_id = 1:n()) %>%  # add episode id
+  distinct
+
+criteria <- list(
+  inclusions = read_csv("../Collaborations/translated_to_icd10cm/codes_translated_to_icd10cm/codes_schnitzer2011_icd10cm_inclusions.csv"),
+  all_exclusions = read_csv("../Collaborations/translated_to_icd10cm/codes_translated_to_icd10cm/codes_schnitzer2011_icd10cm_all_exclusions.csv"),
+  additional_requirements = read_csv("../Collaborations/translated_to_icd10cm/codes_translated_to_icd10cm/codes_schnitzer2011_icd10cm_additional_requirements.csv")
+)
+```
+
+# Convert data to long format
+
+Long format in this case means having one diagnosis per row - this simplifies processing! The episode ID defined above will enable finding inclusion & exclusion criteria for codes within the context of the same episode.
+
+```{r}
+# We convert the admissions into a format where each admission has a unique identifier, and each row represents one diagnosis code
+# admissions_in_long_format <- NULL  # whatever processing needs doing to get to that stage
+admissions_in_long_format <- 
+  admissions %>% 
+  pivot_longer(
+    cols = starts_with("diagnosis"),
+    names_to = "source",
+    values_to = "code",
+    values_drop_na = TRUE
+  )
+```
+
+
+# Inclusion / exclusion matching algorithm
+
+Each episode can have one or more associated diagnosis codes.
+
+The inclusion and exclusion codes comprise the following:
+
+* Inclusions
+  - Additional requirements - these are codes that need to be present in the same episode in addition to the 2nd hand tobacco smoke diagnosis to be included
+* Exclusions - these are defined for certain inclusion codes, so we only include the relevant codes if none of the other codes in the same episode
+  - Malnutrition exclusions - these are specified separately for convenience in translation only so they are to be merged with the other exclusion
+
+The codes are specified in a human-readable format (in columns `inclusion_code`, `exclusion_code`, or `additional_inclusion_code`), as well as a `regex_prefix` variable, which is a *regular expression* designed to capture the relevant sequence of characters. In most cases this is just a string prefaced by a caret (`^`), to denote the beginning of a string, e.g. `^J45`, but there are a few codes for undetermined intent poisonings where a more complex sequence is matched: to distinguish `T36` codes with undetermined intent (6th character being `4`: `^T36..4`) from accident, self-harm or assault codes (6rh character *not* being `4`: `^T36..[^4]`).
+
+The algorithm outline is as follows:
+
+1. Create a subset of codes that match any of the inclusion codes (including the age criterion)
+2. Remove inclusions that don't match the additional requirements
+  - Take subset of included codes that have additional requirements
+  - Take episode ids of codes with additional requirements and take subset of episodes that match additional requirement codes
+  - Keep intersect of episodes (episode ids) that have an inclusion code and also its associated additional requirement
+3. From the subset of episodes with inclusion codes create a subset of codes that match any of the exclusions
+4. Find intersect between episodes with inclusions and episodes with exclusions that match the inclusions (using episode id and inclusion id)
+5. Keep subset of inclusion codes with the intersect from 4. removed
+
+## Step 1: Create a subset of codes that match any of the inclusion codes (including the age criterion)
+
+```{r}
+admissions_with_inclusions <-
+  admissions_in_long_format %>%
+  select(id, episode_id, code, age) %>%
+  regex_inner_join(
+    criteria$inclusions, by = c("code"="regex_prefix")
+  ) %>%
+  filter(age<age_less_than)
+```
+
+## Step 2: Remove inclusions that don't match the additional requirements
+
+```{r}
+## what inclusion index was used for codes with additional requirements?
+inclusion_index_with_additional_requirements <-
+  criteria$additional_requirements %>%
+  .$inclusion_index %>%
+  unique
+
+## take subset of includes codes that have additional requirements
+admissions_with_inclusions_with_additional_requirements <-
+  admissions_with_inclusions %>%
+  filter(inclusion_index %in% inclusion_index_with_additional_requirements)
+
+## take subset of episodes that contain codes with additional requirements
+episodes_with_additional_requirements <-
+  admissions_with_inclusions_with_additional_requirements %>%
+  select(id, episode_id) %>%  # keep id & episode ids
+  distinct %>%
+  left_join(admissions_in_long_format, by = c("id", "episode_id")) %>%
+  select(id, episode_id, code) %>%
+  regex_inner_join(  # keep only episodes that have at least one additional requirement
+    criteria$additional_requirements, by=c("code"="regex_prefix")
+  )
+
+admissions_with_additional_requirements_satisfied <-
+  admissions_with_inclusions_with_additional_requirements %>%
+  semi_join(episodes_with_additional_requirements, by = c("id","episode_id")) %>%  # keep admission with inclusion codes that have episode ids that were found to have any of the additional requirements also
+  distinct
+
+admissions_with_inclusion_but_additional_requirements_not_satisfied <-
+  admissions_with_inclusions_with_additional_requirements %>%
+  anti_join(episodes_with_additional_requirements, by = c("id","episode_id")) %>%  # keep admission with inclusion codes that have episode ids that were found to have any of the additional requirements also
+  distinct
+  
+## define the narrower subset of episodes with inclusion codes- remove codes with additional requirements, and then add in those episodes with additional requirements where the additional requirements were satisfied
+admissions_with_inclusions_after_sorting_additional_requirements <-
+  admissions_with_inclusions %>%
+  anti_join(
+    admissions_with_inclusions_with_additional_requirements, by = c("id", "episode_id", "code")
+  ) %>%
+  bind_rows(
+    .,
+    admissions_with_additional_requirements_satisfied
+  ) %>%
+  distinct
+```
+
+
+## Step 3: From the subset of episodes with inclusion codes create a subset of codes that match any of the exclusions
+
+```{r}
+episodes_with_inclusions <-
+  admissions_with_inclusions_after_sorting_additional_requirements %>%
+  select(id, episode_id) %>%
+  distinct
+
+episodes_matching_any_exclusions <-
+  episodes_with_inclusions %>%
+  left_join(admissions_in_long_format, by = c("id", "episode_id")) %>%
+  select(id, episode_id, code) %>%
+  regex_inner_join(  # keep only episodes that have at least one additional requirement
+    criteria$all_exclusions, by=c("code"="regex_prefix")
+  )
+```
+
+
+## Step 4: Find intersect between episodes with inclusions and episodes with exclusions that match the inclusions (using episode id and inclusion id)
+
+```{r}
+intersect_between_inclusions_and_exclusions <-
+  admissions_with_inclusions_after_sorting_additional_requirements %>%
+  inner_join(
+    episodes_matching_any_exclusions,
+    by = c("id","episode_id","inclusion_index")
+  )
+```
+
+
+## Step 5: Keep subset of inclusion codes with the intersect from 4. removed
+
+```{r}
+inclusion_codes_with_exclusions_removed <-
+  admissions_with_inclusions_after_sorting_additional_requirements %>%
+  anti_join(
+    intersect_between_inclusions_and_exclusions,
+    by = c("id","episode_id","inclusion_index")
+  )
+```
+
+# Results of the process
+
+The processing of the data took this long:
+
+```{r}
+toc()  # display how much time elapsed since starting timing!
+```
+
+A total of N=`r format(nrow(admissions), big.mark=",")` admissions were processed or N=`r format(nrow(admissions_in_long_format), big.mark=",")` of diagnosis codes, belonging to N=`r format(n_distinct(admissions$id),big.mark=",")` individuals.
+
+A total of N=`r format(nrow(inclusion_codes_with_exclusions_removed), big.mark=",")` of codes suggestive of maltreatment or neglect were found, belonging to N=`r format(n_distinct(inclusion_codes_with_exclusions_removed$episode_id,inclusion_codes_with_exclusions_removed$id), big.mark=",")` episodes, or N=`r format(n_distinct(inclusion_codes_with_exclusions_removed$id), big.mark=",")` individuals.
+
+## Breakdown of maltreatment categories according to Schnitzer et al., 2011
+
+```{r}
+inclusion_codes_with_exclusions_removed %>% 
+  count(maltreatment_category) %>%
+  mutate(percent = scales::percent(n/sum(n), accuracy = 0.1)) %>%
+  add_case(maltreatment_category="TOTAL", n = sum(.$n), percent="100%")
+```
+
+## Number of episodes by individuals
+
+```{r}
+inclusion_codes_with_exclusions_removed %>%
+  group_by(id) %>%
+  summarise(n_episodes = n_distinct(episode_id), .groups = "drop") %>%
+  complete(id = admissions$id, fill = list(n_episodes=0)) %>%  # add in all the ids from all admissions, adding 0 episodes for those not yet included
+  count(n_episodes) %>%
+  mutate(percent = scales::percent(n/sum(n), accuracy = 0.1))
+
+## number of individuals with any episodes
+inclusion_codes_with_exclusions_removed %>%
+  group_by(id) %>%
+  summarise(n_episodes = n_distinct(episode_id), .groups = "drop") %>%
+  complete(id = admissions$id, fill = list(n_episodes=0)) %>%  # add in all the ids from all admissions, adding 0 episodes for those not yet included
+  count(n_episodes > 0) %>%
+  mutate(percent = scales::percent(n/sum(n), accuracy = 0.1))
+```
+
+# Tagging original datasets with inclusions
+
+```{r}
+admissions_tagged_with_inclusions <-
+  admissions %>%
+  mutate(
+    meets_all_criteria = id %in% inclusion_codes_with_exclusions_removed$id & episode_id %in% inclusion_codes_with_exclusions_removed$episode_id,
+    has_inclusion_but_also_exclusion_codes = id %in% intersect_between_inclusions_and_exclusions$id & episode_id %in% intersect_between_inclusions_and_exclusions$episode_id,
+    has_inclusion_but_not_additional_requirements = id %in% admissions_with_inclusion_but_additional_requirements_not_satisfied$id & episode_id %in% admissions_with_inclusion_but_additional_requirements_not_satisfied$episode_id
+  )
+
+write_csv(admissions_tagged_with_inclusions, path = "../Collaborations/translated_to_icd10cm/sample_set_of_simulated_3_yrs_of_encounters_tagged_with_schnitzer2011_inclusions.csv")
+
+## also write reduced file that's smaller
+write_csv(
+  admissions_tagged_with_inclusions %>% select(id, episode_id, cm, cy, meets_all_criteria, has_inclusion_but_also_exclusion_codes, has_inclusion_but_not_additional_requirements), 
+  path = "../Collaborations/translated_to_icd10cm/reduced_sample_set_of_simulated_3_yrs_of_encounters_tagged_with_schnitzer2011_inclusions.csv")
+
+```
+
