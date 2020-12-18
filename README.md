@@ -35,6 +35,17 @@ Inclusion and exclusion codes are listed separately for ICD-9 and ICD-10, and ea
 
 A note on file naming: we've called the codes "empirical" inclusions or exclusions because they are based on the codes reported by Schnitzer, et al. [[4]](#4) after they reviewed the cases and confirmed which codes were found using their criteria. There is a longer, "a-priori" list of codes indicative of maltreatment published in the same study, but not all of those codes were found in the case notes they reviewed.
 
+### Schnitzer et al. (2011) codes translated to ICD-10-CM
+
+I've translated the ICD-9-CM specified codes to ICD-10-CM also:
+
+* [`Schnitzer_et_al_2011_ICD_crossmapping_including_ICD-10-CM.xlsx` contains an overview of the entire cross-mapping process, including the ICD-9-CM codes, the ICD-9 and ICD-10 translations, and the ICD-10-CM translation](processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_including_ICD-10-CM.xlsx)
+
+The below codes are one-code-per-row listings of inclusions, exclusions (the malnourishment code exclusions are also included), and the additional inclusion requirements:
+
+* [`codes_schnitzer2011_icd10cm_inclusions.csv`](processed_ICD_codes/codes_schnitzer2011_icd10cm_inclusions.csv)
+* [`codes_schnitzer2011_icd10cm_all_exclusions.csv`](processed_ICD_codes/codes_schnitzer2011_icd10cm_all_exclusions.csv)
+* [`codes_schnitzer2011_icd10cm_additional_requirements.csv`](processed_ICD_codes/codes_schnitzer2011_icd10cm_additional_requirements.csv)
 
 ## MVR codes
 

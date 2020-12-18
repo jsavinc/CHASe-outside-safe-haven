@@ -474,8 +474,8 @@ The above listed codes are specified in a compact format, using code ranges such
 ## Compact listing
 
 ```{r}
-translations_icd10cm$inclusions <-
-  translations_icd10cm$inclusions %>%
+codes_translated$inclusions <-
+  codes_translated$inclusions %>%
   left_join(schnitzer_age_requirements, by="inclusion_index") %>%
   left_join(schnitzer_code_categories, by="inclusion_index")
 
