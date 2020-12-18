@@ -98,6 +98,10 @@ codes_translated <-
     .x = excel_sheets(previously_translated_codes_file),
     .f = ~read_excel(path = previously_translated_codes_file, sheet = .x)
   ) %>% set_names(x = ., nm = excel_sheets(previously_translated_codes_file))
+
+schnitzer_age_requirements <- read_csv("./processed_ICD_codes/schnitzer_et_al_2011_empirical_inclusions_age_index.csv")
+schnitzer_code_categories <- read_csv("./processed_ICD_codes/schnitzer_et_al_2011_empirical_inclusions_categories_index.csv") %>%
+  rename(maltreatment_category = maltreatment_type_schnitzer2011)
 ```
 
 
@@ -435,7 +439,7 @@ tibble::tribble(
                                                                  "Renal tubular acidosis",         "588.8",       "N25.8",               NA,
                                                             "Chronic renal insufficiency",         "593.9",       "N18, N19, N28.9",               "Schnitzer specified Chronic renal insufficiency, but listed code 593.9 Disorders of kidney and ureter, unspecified; I'm assuming they mean the former, which maps to N18 & possibly N19, but we'll also include N28.9 Disorder of kidney and ureter, unspecified",
                                                                 "Urinary tract infection",         "599.0",       "N39.0",               NA,
-                                                  "Diffuse diseases of connective tissue",   "710.0–710.9",       "M32-M36",               "M32-M36  Systemic connective tissue disorders: based on matching ICD-9-CM code headings to ICD-10-CM & prefixes generated via GEMs",
+                                                  "Diffuse diseases of connective tissue",   "710.0–710.9",       "M32-M36",               "M32-M36  Systemic connective tissue disorders: based on matching ICD-9-CM code headings to ICD-10-CM & regex_prefixes generated via GEMs",
                           "Rheumatoid arthritis and other inflammatory polyarthropathies",   "714.0–714.9",       "M05, M06, M08, M12.0",               "based on GEMs, we also include M12.0 Chronic postrheumatic arthropathy",
                                                             "Cardiac disease, congenital",   "745.0–747.9",       "Q20-Q28, P29.3",               "Q20-Q28 Congenital malformations of the circulatory system; also includes P29.3 Persistent foetal circulation",
                                                                  "Cleft palate/cleft lip", "749.00–749.25",       "Q35, Q36, Q37",               NA,
@@ -519,11 +523,10 @@ stopifnot(separate_code_ranges_icd10cm(test_codes)==expected_separated_codes)
 
 On to resolving the codes!
 
+I'm keeping the original code in the column `icd10cm` below, and the parsed/resolved codes in `parsed_codes`, for manual review.
+
 ```{r}
 codes_resolved <- list()
-
-# TODO: deal with udnetermined intent poisoning codes
-# example T36.0X4
 
 codes_resolved$inclusions <-
   codes_translated_including_icd10cm$inclusions %>%
@@ -539,14 +542,14 @@ codes_resolved$inclusions <-
   separate_rows(parsed_codes, sep=",") %>%
   mutate(
     parsed_codes = str_remove_all(parsed_codes, pattern="\\."),  # remove dot
-    prefix = paste0("^",parsed_codes),
-    prefix = if_else(condition = undetermined_intent_include_flag, true = paste0(prefix,"..4"), false = prefix), # T36.0X4 or T360X4
-    prefix = if_else(condition = undetermined_intent_exclude_flag, true = paste0(prefix,"..[^4]"), false = prefix) # exclude T36.0X4 or T360X4
+    regex_prefix = paste0("^",parsed_codes),
+    regex_prefix = if_else(condition = undetermined_intent_include_flag, true = paste0(regex_prefix,"..4"), false = regex_prefix), # T36.0X4 or T360X4
+    regex_prefix = if_else(condition = undetermined_intent_exclude_flag, true = paste0(regex_prefix,"..[^4]"), false = regex_prefix) # exclude T36.0X4 or T360X4
     ) %>%
   distinct
 
 test_tibble_undetermined_intent <- tibble(code = c("T36015", "T36014231", "T3604"))  # the last code is misspecified - not enough characters!
-test_tibble_undetermined_intent %>% fuzzyjoin::regex_left_join(y = codes_resolved$inclusions, by=c("code"="prefix"))
+test_tibble_undetermined_intent %>% fuzzyjoin::regex_left_join(y = codes_resolved$inclusions, by=c("code"="regex_prefix"))
 
 codes_resolved$exclusions <-
   codes_translated_including_icd10cm$exclusions %>%
@@ -577,7 +580,8 @@ codes_resolved$all_exclusions <-
         exclusion_index = max(codes_resolved$exclusions$exclusion_index)+1,
         inclusion_index = codes_resolved$inclusions %>% filter(parsed_codes=="E43") %>% .$inclusion_index
       )
-  )
+  ) %>%
+  mutate(regex_prefix = paste0("^",str_remove_all(parsed_codes, pattern="\\.")))
 
 codes_resolved$additional_requirements <-
   codes_translated_including_icd10cm$additional_requirements %>%
@@ -587,13 +591,53 @@ codes_resolved$additional_requirements <-
   mutate(across(icd10cm, ~trimws(.))) %>%  # remove whitespace before & after codes
   mutate(parsed_codes = separate_code_ranges_icd10cm(icd10cm)) %>%
   separate_rows(parsed_codes, sep=",") %>%
-  distinct
+  distinct %>%
+  mutate(regex_prefix = paste0("^",str_remove_all(parsed_codes, pattern="\\.")))
 ```
 
+## Cleaning up codes
 
-# Algorithm for asigning codes indicative of maltreatment/neglect
+Finally, we only keep the minimal information needed - the inclusion/exclusion codes, the regular expression prefix used for matching codes, and the age requirements, and the indexes that tell us what inclusion codes go with exclusion codes or additional inclusions.
 
 ```{r}
+codes_cleaned <- list()
 
+codes_cleaned$inclusions <-
+  codes_resolved$inclusions %>%
+  select(inclusion_index, inclusion_code = icd10cm, regex_prefix) %>%
+  left_join(schnitzer_age_requirements, by = "inclusion_index") %>%
+  left_join(schnitzer_code_categories, by = "inclusion_index")
+
+codes_cleaned$all_exclusions <-
+  codes_resolved$all_exclusions %>%
+  select(inclusion_index, exclusion_index, exclusion_code = icd10cm, regex_prefix)
+
+codes_cleaned$additional_requirements <-
+  codes_resolved$additional_requirements %>%
+  select(inclusion_index, additional_inclusion_code = icd10cm, regex_prefix)
 ```
+
+## Save codes
+
+```{r}
+iwalk(
+  .x = codes_cleaned,
+  .f = function(x,name) {
+    filepath = paste0("./archived/processed_ICD_codes/codes_schnitzer2011_icd10cm_",name,".csv")
+    write_csv(x = x, path = filepath)
+  }
+)
+
+## also save in this second location:
+if (!dir.exists("../Collaborations/translated_to_icd10cm/codes_translated_to_icd10cm")) dir.create("../Collaborations/translated_to_icd10cm/codes_translated_to_icd10cm")
+
+iwalk(
+  .x = codes_cleaned,
+  .f = function(x,name) {
+    filepath = paste0("../Collaborations/translated_to_icd10cm/codes_translated_to_icd10cm/codes_schnitzer2011_icd10cm_",name,".csv")
+    write_csv(x = x, path = filepath)
+  }
+)
+```
+
 
