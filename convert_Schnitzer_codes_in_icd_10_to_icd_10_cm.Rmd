@@ -1,5 +1,5 @@
 ---
-title: Extract & cross-map ICD codes from MVR papers and Schnitzer et al 2011
+title: Translating ICD-9-CM (and the previously translated ICD-9 and ICD-10) codes from Schnitzer et al., 2011, to ICD-10-CM
 author: "Jan Savinc"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
@@ -327,10 +327,12 @@ In conclusion, the codes are then `Y26, Y27, Y30, Y31, Y32, Y33`.
 Below I've used the `tibble:tribble()` function to define the tables of translations by hand, in combination with the `datapasta::tribble_paste()` function which pastes a requested table into a format for hand editing.
 
 ```{r}
+translations_icd10cm <- list()
+
 # the tribble below was made by using datapasta::tribble_paste()
 # datapasta::tribble_paste(input_table = codes_translated$inclusions %>% select(condition, icd9cm) %>% mutate(icd10cm = "", comment_icd10cm = ""))
 # datapasta::tribble_paste(input_table = inclusions_icd10cm %>% mutate_at(vars(icd10cm,comment_icd10cm), ~if_else(is.na(.),"",.)))
-inclusions_icd10cm <- tibble::tribble(
+translations_icd10cm$inclusions <- tibble::tribble(
                                       ~condition,              ~icd9cm, ~icd10cm, ~comment_icd10cm,
                                 "Genital herpes",              "054.1",       "A60",            "",
                           "Gonococcal infection",                "098",       "A54",            "",
@@ -368,7 +370,7 @@ inclusions_icd10cm <- tibble::tribble(
                                  "Burn of trunk",                "942",       "T21",               NA,
                                    "Burn of leg",                "945",       "T24, T25",               "ICD-10-CM treats ankle and foot as a separate code so that's included",
                         "Burn of multiple sites",                "946",       NA,               "ICD-10-CM denotes multiple burn sites as a 6th digit, specifying for each individual burn site that there are other burn sites present; These cases are already covered by the other codes denoting burns!",
-                 "Poisoning by drugs/medicinals",            "960-979",       "T36-T50",               NA,
+                 "Poisoning by drugs/medicinals",            "960-979",       "T36-T50a",               "T36-T50 in ICD-10-CM incldues undetermined intent codes, which were specified by Schnitzer et al. 2011 but with different exclusion codes (see below); therefore we need to exclude 6th character code '4' to exclude undetermined intent poisoning!",
                 "Drowning, non-fatal submersion",              "994.1",       "T75.1",               NA,
                      "Second-hand tobacco smoke",             "E869.4",       "Z77.22",               "Different code to ICD-10!",
                              "Swimming accident",             "E910.2",       "W68, W69",               NA,
@@ -376,12 +378,12 @@ inclusions_icd10cm <- tibble::tribble(
                          "Other (near) drowning",             "E910.8",       "W73",               NA,
                "Accidental (near) drowning, NOS",             "E910.9",       "W74",               NA,
                           "Unarmed fight, brawl",             "E960.0",       "Y04",               "Y04 in ICD-10-CM is slightly more widely defined than E960.0 in ICD-9-CM but it conceptually matches the description.",
-                "Undetermined intent, poisoning",               "E980",       "T36-T50*",               "Undetermined intent in ICD-10-CM is denoted by 6th character '4' in poisoning codes T36-T50",
+                "Undetermined intent, poisoning",               "E980",       "T36-T50b",               "Undetermined intent in posioning codes in ICD-10-CM is denoted by 6th character '4' in poisoning codes T36-T50, e.g. T36.0X4",
                   "Undetermined intent, firearm",               "E985",       "Y22, Y23, Y24, Y25",               NA,
                        "Household circumstances",                "V60",       "Z59",               NA
      )
 
-exclusion_icd10cm <-
+translations_icd10cm$exclusions <-
 # datapasta::tribble_paste(input_table = codes_translated$exclusions %>% select(icd9cm) %>% mutate(icd10cm = "", comment_icd10cm = "") %>% distinct)
 tibble::tribble(
                      ~icd9cm, ~icd10cm, ~comment_icd10cm,
@@ -403,14 +405,14 @@ tibble::tribble(
 
 
 
-malnutrition_exclusions_icd10cm <-
+translations_icd10cm$malnutrition_exclusions <-
 # datapasta::tribble_paste(input_table = codes_translated$malnutrition_exclusions %>% select(condition, icd9cm) %>% mutate(icd10cm = "", comment_icd10cm = "") %>% distinct)
 tibble::tribble(
                                                                                ~condition,         ~icd9cm, ~icd10cm, ~comment_icd10cm,
                                                "Infections of the gastrointestinal tract",         "009.0",       "A09",     "Infectious gastroenteritis and colitis, unspecified",
                                                                            "Tuberculosis",   "010.0–018.9",       "A15-A19",  "A15-A19 Tubercolosis",
                                                                             "HIV disease",           "042",       "B20", 	    "B20 HIV",
-                                                                        "Viral hepatitis",  "070.00–070.9",       "B15-B19",  "B15-B19 	Viral hepatitis",
+                                                                        "Viral hepatitis",  "070.00–070.9",       "B15-B19",  "B15-B19 Viral hepatitis",
                                                                              "Malignancy",  "140.0–208.91",       "C00-C96, C7A, C7B",        "Covers entire C__ range of malignant neoplasms",
                                                                          "Hypothyroidism",     "243–244.9",       "E00-E03, E89.0",   "E00-E03 congenital & acquired hypothyroidism; E89.0 postprocedural hypothyroidism",
                                                                       "Diabetes mellitus", "250.00–250.93",       "E08-E13",   "E08-E13 Diabetes mellitus",
@@ -449,7 +451,7 @@ tibble::tribble(
                                                                          "Lead poisoning",   "984.0–984.9",       "T56.0",               NA
      )
 
-additional_requirements_icd10cm <-
+translations_icd10cm$additional_requirements <-
 # datapasta::tribble_paste(input_table = codes_translated$additional_requirements %>% select(icd9cm) %>% mutate(icd10cm = "", comment_icd10cm = "") %>% distinct)
 tibble::tribble(
             ~icd9cm, ~icd10cm, ~comment_icd10cm,
@@ -463,4 +465,135 @@ tibble::tribble(
 
 # Compiling translated codes
 
-The above listed codes are specified in a compact format, using code ranges such as C00-C97, for example. In addition to that, some codes are excluded on the basis of having a particular 6th character code in ICD-10. In order to 
+The above listed codes are specified in a compact format, using code ranges such as C00-C97, for example. In addition to that, some codes are excluded on the basis of having a particular 6th character code in ICD-10. First these will be combined with the ICD-9-CM to ICD-9 and ICD-10 translation to provide a complete, compact listing of translated codes; next, the codes will be resolved so that individual codes are available for algorithmic use.
+
+
+## Compact listing
+
+```{r}
+codes_translated_including_icd10cm <- 
+  imap(
+    .x = codes_translated,
+    .f = ~left_join(x = .x, y = translations_icd10cm[[.y]])
+  )
+
+openxlsx::write.xlsx(x = codes_translated_including_icd10cm, file = "./processed_ICD_codes/Schnitzer_et_al_2011_ICD_crossmapping_including_ICD-10-CM.xlsx")
+```
+
+
+## Resolving codes listed as ranges to individual codes
+
+To resolve a code range like `X20-X30`, we need to interpret the range and produce individual codes, e.g. `X20, X21, X22, ..., X30`.
+
+```{r}
+## the easiest way to specify this function is to write a function that separates a single string "X20-X30" to "X20,X21,X22,...";
+## then we use purrr::map_chr() to apply this function to all codes
+separate_code_ranges_icd10cm <- function(code_range) {
+  separate_single_code_range <- function(code_range) {
+    first_character <- toupper(str_sub(code_range, 1, 1))  # extract letter at start of code
+    numbers <- parse_number(str_split(code_range, pattern="\\-", simplify = TRUE))
+    numbers_interpolated <- seq(from=numbers[1], to=numbers[2], by=1)
+    numbers_padded <- str_pad(numbers_interpolated, width = 2, pad = "0")  # pad single-digit numbers so they always have a leading zero
+    comma_separated_string <- paste0(first_character, numbers_padded, collapse = ",")
+    return(comma_separated_string)
+  }
+  map_chr(
+    .x = code_range,
+    .f = function(this_code_range) {
+      if (is.na(this_code_range)) return(this_code_range)  # there were some codes that didn't exist, so this is here to not break the function if NAs provided
+      
+      ## run the separating function if dash present in code, and return unchanged code if not
+      if (str_detect(string = this_code_range, pattern = "\\-")) {
+        return(separate_single_code_range(this_code_range))
+      } else {
+        return(this_code_range)
+      }
+    }
+  )
+}
+## test that the function works as expected...
+test_codes <- c("A22","F10-F12","X23.4","Y00-Y04")
+expected_separated_codes <- c("A22","F10,F11,F12","X23.4","Y00,Y01,Y02,Y03,Y04")
+stopifnot(separate_code_ranges_icd10cm(test_codes)==expected_separated_codes)
+```
+
+On to resolving the codes!
+
+```{r}
+codes_resolved <- list()
+
+# TODO: deal with udnetermined intent poisoning codes
+# example T36.0X4
+
+codes_resolved$inclusions <-
+  codes_translated_including_icd10cm$inclusions %>%
+  select(inclusion_index, icd10cm) %>%
+  drop_na(icd10cm) %>%
+  mutate(
+    undetermined_intent_exclude_flag = str_detect(icd10cm, pattern="a$"),  # detect lowercase a/b at end of code
+    undetermined_intent_include_flag = str_detect(icd10cm, pattern="b$")
+    ) %>%  # add a flag to undetermined intent codes where we'll need to specify a particular character beyond the 3 characters in the code specified for inclusions
+  separate_rows(icd10cm, sep=",") %>%  # separate comma-separated codes into separate rows
+  mutate(across(icd10cm, ~trimws(.))) %>%  # remove whitespace before & after codes
+  mutate(parsed_codes = separate_code_ranges_icd10cm(icd10cm)) %>%
+  separate_rows(parsed_codes, sep=",") %>%
+  mutate(
+    parsed_codes = str_remove_all(parsed_codes, pattern="\\."),  # remove dot
+    prefix = paste0("^",parsed_codes),
+    prefix = if_else(condition = undetermined_intent_include_flag, true = paste0(prefix,"..4"), false = prefix), # T36.0X4 or T360X4
+    prefix = if_else(condition = undetermined_intent_exclude_flag, true = paste0(prefix,"..[^4]"), false = prefix) # exclude T36.0X4 or T360X4
+    ) %>%
+  distinct
+
+test_tibble_undetermined_intent <- tibble(code = c("T36015", "T36014231", "T3604"))  # the last code is misspecified - not enough characters!
+test_tibble_undetermined_intent %>% fuzzyjoin::regex_left_join(y = codes_resolved$inclusions, by=c("code"="prefix"))
+
+codes_resolved$exclusions <-
+  codes_translated_including_icd10cm$exclusions %>%
+  select(inclusion_index, exclusion_index, icd10cm) %>%
+  drop_na(icd10cm) %>%
+  separate_rows(icd10cm, sep=",") %>%  # separate comma-separated codes into separate rows
+  mutate(across(icd10cm, ~trimws(.))) %>%  # remove whitespace before & after codes
+  mutate(parsed_codes = separate_code_ranges_icd10cm(icd10cm)) %>%
+  separate_rows(parsed_codes, sep=",") %>%
+  distinct
+
+codes_resolved$malnutrition_exclusions <-
+  codes_translated_including_icd10cm$malnutrition_exclusions %>%
+  select(malnutrition_index, icd10cm) %>%
+  drop_na(icd10cm) %>%
+  separate_rows(icd10cm, sep=",") %>%  # separate comma-separated codes into separate rows
+  mutate(across(icd10cm, ~trimws(.))) %>%  # remove whitespace before & after codes
+  mutate(parsed_codes = separate_code_ranges_icd10cm(icd10cm)) %>%
+  separate_rows(parsed_codes, sep=",") %>%
+  distinct
+
+codes_resolved$all_exclusions <-
+  bind_rows(
+    codes_resolved$exclusions,
+    codes_resolved$malnutrition_exclusions %>%
+      select(-malnutrition_index) %>%
+      mutate(
+        exclusion_index = max(codes_resolved$exclusions$exclusion_index)+1,
+        inclusion_index = codes_resolved$inclusions %>% filter(parsed_codes=="E43") %>% .$inclusion_index
+      )
+  )
+
+codes_resolved$additional_requirements <-
+  codes_translated_including_icd10cm$additional_requirements %>%
+  select(inclusion_index, icd10cm) %>%
+  drop_na(icd10cm) %>%
+  separate_rows(icd10cm, sep=",") %>%  # separate comma-separated codes into separate rows
+  mutate(across(icd10cm, ~trimws(.))) %>%  # remove whitespace before & after codes
+  mutate(parsed_codes = separate_code_ranges_icd10cm(icd10cm)) %>%
+  separate_rows(parsed_codes, sep=",") %>%
+  distinct
+```
+
+
+# Algorithm for asigning codes indicative of maltreatment/neglect
+
+```{r}
+
+```
+
