@@ -4,9 +4,9 @@ author: "Jan Savinc"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
-  toc: true
-  toc_float: true
-  code_folding: hide
+    toc: true
+    toc_float: true
+    code_folding: hide
 editor_options: 
   chunk_output_type: console
 bibliography: bibliography.bib
@@ -211,7 +211,8 @@ A total of N=`r format(nrow(inclusion_codes_with_exclusions_removed), big.mark="
 inclusion_codes_with_exclusions_removed %>% 
   count(maltreatment_category) %>%
   mutate(percent = scales::percent(n/sum(n), accuracy = 0.1)) %>%
-  add_case(maltreatment_category="TOTAL", n = sum(.$n), percent="100%")
+  add_case(maltreatment_category="TOTAL", n = sum(.$n), percent="100%") %>%
+  kable(caption = "Number of included diagnoses, grouped by maltreatment category according to Schnitzer et al., 2011")
 ```
 
 ## Number of episodes by individuals
@@ -222,7 +223,8 @@ inclusion_codes_with_exclusions_removed %>%
   summarise(n_episodes = n_distinct(episode_id), .groups = "drop") %>%
   complete(id = admissions$id, fill = list(n_episodes=0)) %>%  # add in all the ids from all admissions, adding 0 episodes for those not yet included
   count(n_episodes) %>%
-  mutate(percent = scales::percent(n/sum(n), accuracy = 0.1))
+  mutate(percent = scales::percent(n/sum(n), accuracy = 0.1)) %>%
+  kable(caption = "Number of episodes by individual.")
 
 ## number of individuals with any episodes
 inclusion_codes_with_exclusions_removed %>%
@@ -230,7 +232,8 @@ inclusion_codes_with_exclusions_removed %>%
   summarise(n_episodes = n_distinct(episode_id), .groups = "drop") %>%
   complete(id = admissions$id, fill = list(n_episodes=0)) %>%  # add in all the ids from all admissions, adding 0 episodes for those not yet included
   count(n_episodes > 0) %>%
-  mutate(percent = scales::percent(n/sum(n), accuracy = 0.1))
+  mutate(percent = scales::percent(n/sum(n), accuracy = 0.1)) %>%
+  kable(caption = "Number of individuals with one or more episodes.")
 ```
 
 # Tagging original datasets with inclusions
@@ -250,6 +253,5 @@ write_csv(admissions_tagged_with_inclusions, path = "../Collaborations/translate
 write_csv(
   admissions_tagged_with_inclusions %>% select(id, episode_id, cm, cy, meets_all_criteria, has_inclusion_but_also_exclusion_codes, has_inclusion_but_not_additional_requirements), 
   path = "../Collaborations/translated_to_icd10cm/reduced_sample_set_of_simulated_3_yrs_of_encounters_tagged_with_schnitzer2011_inclusions.csv")
-
 ```
 
