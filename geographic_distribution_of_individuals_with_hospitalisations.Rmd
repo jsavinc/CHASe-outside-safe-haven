@@ -91,6 +91,8 @@ distribution_urban_rural <-
 For cases, in relative terms, there is a higher number of individuals with no hospitalisations in less deprived areas (Carstairs decile 5+, with the opposite for decile 7), and more individuals with hospitalisations in the more deprived areas (deciles 1-4).
 There is less of a trend for controls, where the most deprived decile area has a higher proportion of no hospitalisation controls, and in deciles 8-10, but a balance towardsindividuals with hospitalisations elsewhere.
 
+The association (using chi-square test) between hospitalisation records prior to death (yes/no) and Carstairs decile was significant both for cases & controls.
+
 ```{r}
 (
 distribution_carstairs %>%
@@ -109,14 +111,17 @@ distribution_carstairs %>%
   
 )
 
-distribution_carstairs %>% filter(case == "case") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
-distribution_carstairs %>% filter(case == "control") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
+distribution_carstairs %>% filter(case == "case") %>% pivot_wider(names_from = had_records, values_from = n) %>% select(yes,no) %>% chisq.test()
+distribution_carstairs %>% filter(case == "control") %>% pivot_wider(names_from = had_records, values_from = n) %>% select(yes,no) %>% chisq.test()
 ```
 
 
 # Testing associations: hospitalisations & urban-rural indicator
 
 In this urban-rural split, in relative terms, it looks like Large Urban areas have a larger proportion of individuals with no hospitalisations, whereas the balance is towards larger proportion of individuals with hospitalisations in all other areas or unclear trends due to small numbers. This is more pronounced for controls than for cases.
+
+The association (using chi-square test) between hospitalisation records prior to death (yes/no) and 8-fold Urban-rural indicator was significant for controls but not for cases. (for cells with small N for cases, an N of 5 was assumed)
+
 
 ```{r}
 (
@@ -136,8 +141,9 @@ distribution_urban_rural %>%
   
 )
 
-distribution_urban_rural %>% filter(case == "case") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
-distribution_urban_rural %>% filter(case == "control") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
+distribution_urban_rural %>% filter(case == "case") %>% mutate(n = replace_na(n, replace=5)) %>% pivot_wider(names_from = had_records, values_from = n) %>% select(yes,no) %>% chisq.test(correct = TRUE)
+
+distribution_urban_rural %>% filter(case == "control") %>% pivot_wider(names_from = had_records, values_from = n) %>% select(yes,no) %>% chisq.test()
 ```
 
 
@@ -151,6 +157,10 @@ In the study, to avoid small numbers, we grouped the 8-fold Urban-rural indicato
 * Everything else: Remote, Very Remote Small Towns, & Accessible, Remote, Very Remote Rural
 
 In this urban-rural split, in relative terms, it looks like Large Urban areas have a larger proportion of individuals with no hospitalisations, whereas the balance is towards larger proportion of individuals with hospitalisations in all other areas. This is more pronounced for controls than for cases.
+
+
+The association (using chi-square test) between hospitalisation records prior to death (yes/no) and our 4-fold Urban-rural indicator was significant for controls but not for cases.
+
 
 ```{r}
 distribution_urban_rural_4 <-
@@ -175,8 +185,25 @@ distribution_urban_rural_4 %>%
   
 )
 
-distribution_urban_rural_4 %>% filter(case == "case") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
-distribution_urban_rural_4 %>% filter(case == "control") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
+distribution_urban_rural_4 %>% filter(case == "case") %>% pivot_wider(names_from = had_records, values_from = n) %>% select(yes, no) %>% chisq.test()
+distribution_urban_rural_4 %>% filter(case == "control") %>% pivot_wider(names_from = had_records, values_from = n) %>% select(yes, no) %>% chisq.test()
 ```
 
 
+# Association between case-status and geographic variable in individuals with hospitalisations
+
+Here we are testing whether the geographic variable was associated with case status only in individuals with hospitalisations.
+
+Carstairs decile was not associated with case status, whereas both the 8-fold and 4-fold split of Urban-rural indicator were!
+
+```{r}
+distribution_carstairs %>% filter(had_records == "yes") %>% pivot_wider(names_from = case, values_from = n) %>% select(case, control) %>% chisq.test()
+
+distribution_urban_rural %>% filter(had_records == "yes") %>% pivot_wider(names_from = case, values_from = n) %>% select(case, control) %>% chisq.test()
+
+distribution_urban_rural_4 %>% filter(had_records == "yes") %>% pivot_wider(names_from = case, values_from = n) %>% select(case, control) %>% chisq.test()
+```
+
+# Conclusions
+
+The cateogrisation of individuals into those with hospital records and those without is associated with geography - cases were more likely to have hospitalisations than controls, but the respective rates of hospitalisation also differed by geography.
