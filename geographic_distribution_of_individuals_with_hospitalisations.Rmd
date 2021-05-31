@@ -1,0 +1,182 @@
+---
+title: CHASe Geographic distribution of individuals by whether they had hospitalisations or not
+author: "Jan Savinc"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+  toc: true
+toc_float: true
+code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+For regression analyses and for computing denominators, we only retained individuals with hospitalisations prior to death (for cases) or hospitalisations prior to the date equivalent to the date of matched cases' death (for controls).
+This resulted in a different proportion of cases & controls with prior hospitalisations, and "breaks" the 1:10 case:control matching. It also results in a different gegoraphic distribution fo cases & controls. The distribution was not uniform to begin with - there was a gradient of deprivation with more cases in more deprived areas, which is retained, however, the distribution is no longer equal between cases & controls. In this document we examine the distributions.
+
+# Libraries
+
+```{r, warning=FALSE}
+library(tidyverse)
+library(knitr)  # for showing tables inside rmarkdown
+library(readxl)  # read excel files
+library(broom)
+```
+
+# Load data
+
+```{r}
+consort_data <- 
+  read_csv(file = "../Safe Haven Exports/CONSORT_diagram_data.csv") %>%
+  mutate(
+    note = case_when(
+      note == "Excluded: cases with no hospital records prior to death before age 18" &
+        N > 1000 ~ "Excluded: controls with no hospital records prior to death before age 18",
+      TRUE ~ note
+    )
+  )  # correction: instead of 'cases' it should be 'controls' at the entry for exclusions with no records prior to death or age 18 with N>1000
+
+cohort_carstairs <- read_excel(
+  path = "X:/R1369/CSO FULL grant/Safe Haven Exports/Descriptive summary of cohort & individuals with any records/Descriptive_summary_cohort_by_whether_they_had_any_records_prior_to_death.xlsx",
+  sheet = "Carstairs", 
+) %>%
+  slice(-nrow(.))  # remove final footnote entry in spreadsheet
+
+cohort_urban_rural <- read_excel(
+  path = "X:/R1369/CSO FULL grant/Safe Haven Exports/Descriptive summary of cohort & individuals with any records/Descriptive_summary_cohort_by_whether_they_had_any_records_prior_to_death.xlsx",
+  sheet = "Urban-rural indicator", 
+) %>%
+  slice(-nrow(.))  # remove final footnote entry in spreadsheet
+
+
+hypothesis_tests <- list()  # empty list for storing hypothesis tests!
+```
+
+
+# Process data
+
+```{r}
+distribution_carstairs <-
+  cohort_carstairs %>%
+  mutate(carstairs_decile = as.integer(Indicator)) %>%
+  mutate(across(.cols = matches("records"), .fns = ~str_extract(string = .x, pattern = "^\\d+\\s") %>% as.integer())) %>%
+  select(-Indicator, -Measure) %>%
+  pivot_longer(cols = matches("records"), names_to = "name", values_to = "n") %>%
+  extract(col = name, into = c("case","had_records"), regex = "(case|control)_(no|had).*", remove = TRUE) %>%
+  mutate(had_records = if_else(had_records == "had", "yes", "no"))
+
+
+distribution_urban_rural <-
+  cohort_urban_rural %>%
+  mutate(urban_rural_8 = Indicator) %>%
+  mutate(across(.cols = matches("records"), .fns = ~str_extract(string = .x, pattern = "^\\d+\\s") %>% as.integer())) %>%
+  select(-Indicator, -Measure) %>%
+  pivot_longer(cols = matches("records"), names_to = "name", values_to = "n") %>%
+  extract(col = name, into = c("case","had_records"), regex = "(case|control)_(no|had).*", remove = TRUE) %>%
+  mutate(had_records = if_else(had_records == "had", "yes", "no")) %>%
+  mutate(urban_rural_4 = case_when(
+      str_detect(urban_rural_8, pattern="^[4-8]") ~ "4-8: All others",
+      TRUE ~ urban_rural_8
+    ))
+```
+
+# Testing associations: hospitalisations & Carstairs indicator
+
+For cases, in relative terms, there is a higher number of individuals with no hospitalisations in less deprived areas (Carstairs decile 5+, with the opposite for decile 7), and more individuals with hospitalisations in the more deprived areas (deciles 1-4).
+There is less of a trend for controls, where the most deprived decile area has a higher proportion of no hospitalisation controls, and in deciles 8-10, but a balance towardsindividuals with hospitalisations elsewhere.
+
+```{r}
+(
+distribution_carstairs %>%
+    mutate(had_records = if_else(had_records == "yes", "had hospitalisations", "no hospitalisations prior to death")) %>%
+    group_by(case, had_records) %>%
+    mutate(proportion = n / sum(n, na.rm=TRUE)) %>%
+    ungroup %>%
+  ggplot(data = ., aes(x = carstairs_decile, y = proportion, fill = had_records)) +
+    geom_col(position = "dodge") +
+    facet_wrap(~case, scales = "free") +
+    scale_x_continuous(breaks = 1:10) +
+    scale_y_continuous(labels = scales::percent) +
+    scale_fill_viridis_d() +
+    theme_bw() +
+    NULL
+  
+)
+
+distribution_carstairs %>% filter(case == "case") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
+distribution_carstairs %>% filter(case == "control") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
+```
+
+
+# Testing associations: hospitalisations & urban-rural indicator
+
+In this urban-rural split, in relative terms, it looks like Large Urban areas have a larger proportion of individuals with no hospitalisations, whereas the balance is towards larger proportion of individuals with hospitalisations in all other areas or unclear trends due to small numbers. This is more pronounced for controls than for cases.
+
+```{r}
+(
+distribution_urban_rural %>%
+    mutate(had_records = if_else(had_records == "yes", "had hospitalisations", "no hospitalisations prior to death")) %>%
+    group_by(case, had_records) %>%
+    mutate(proportion = n / sum(n, na.rm=TRUE)) %>%
+    ungroup %>%
+  ggplot(data = ., aes(x = urban_rural_8, y = proportion, fill = had_records)) +
+    geom_col(position = "dodge") +
+    facet_wrap(~case, scales = "free") +
+    scale_y_continuous(labels = scales::percent) +
+    scale_fill_viridis_d() +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    NULL
+  
+)
+
+distribution_urban_rural %>% filter(case == "case") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
+distribution_urban_rural %>% filter(case == "control") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
+```
+
+
+# Testing associations: hospitalisations & urban-rural indicator, 4-way split
+
+In the study, to avoid small numbers, we grouped the 8-fold Urban-rural indicator into 4 categories:
+
+* Large urban
+* Other urban
+* Accessible small towns
+* Everything else: Remote, Very Remote Small Towns, & Accessible, Remote, Very Remote Rural
+
+In this urban-rural split, in relative terms, it looks like Large Urban areas have a larger proportion of individuals with no hospitalisations, whereas the balance is towards larger proportion of individuals with hospitalisations in all other areas. This is more pronounced for controls than for cases.
+
+```{r}
+distribution_urban_rural_4 <-
+  distribution_urban_rural %>%
+  group_by(urban_rural_4, case, had_records) %>%
+  summarise(n = sum(n, na.rm = TRUE), .groups = "drop")
+
+(
+distribution_urban_rural_4 %>%
+    mutate(had_records = if_else(had_records == "yes", "had hospitalisations", "no hospitalisations prior to death")) %>%
+    group_by(case, had_records) %>%
+    mutate(proportion = n / sum(n, na.rm=TRUE)) %>%
+    ungroup %>%
+  ggplot(data = ., aes(x = urban_rural_4, y = proportion, fill = had_records)) +
+    geom_col(position = "dodge") +
+    facet_wrap(~case, scales = "free") +
+    scale_y_continuous(labels = scales::percent) +
+    scale_fill_viridis_d() +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    NULL
+  
+)
+
+distribution_urban_rural_4 %>% filter(case == "case") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
+distribution_urban_rural_4 %>% filter(case == "control") %>% pivot_wider(names_from = had_records, values_from = n) %>% {chisq.test(x = .$no, y = .$yes)}
+```
+
+
