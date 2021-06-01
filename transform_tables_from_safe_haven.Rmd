@@ -183,6 +183,9 @@ tables$not_in_work <-
 
 tables$maternal_death <-
   read_excel(path = "../Safe Haven Exports/2020-10-30/Frequency_table_mothers_death_individuals_with_records_prior_to_death.xlsx", sheet = 1, ) %>% slice(-nrow(.))  # remove last row, it's the caption
+
+tables$schnitzer_excluding_dental_caries <-
+  read_excel(path = "../Safe Haven Exports/Schnitzer_codes_investigated_2020-07-21/Frequency_table_schnitzer_codes_without_dental_caries.xlsx", sheet = "Individuals") %>% slice (-nrow(.))  # remove the last row, being the caption
 ```
 
 
@@ -274,6 +277,19 @@ transformed$schnitzer_all_types <-
   mutate(indicator = "Schnitzer") %>%
   relocate(indicator)
 
+transformed$schnitzer_excluding_dental_caries <-
+  tables$schnitzer_excluding_dental_caries %>%
+  mutate(n = str_extract(neglect, pattern = "^\\d+\\s") %>% as.integer()) %>%
+  left_join(denominators$individuals_with_any_records_prior_to_death %>% filter(has_no_records_prior_to_death == "No"), by = c("case","sex")) %>%
+  mutate(
+    n_prop = num_and_prop(numerator = n, denominator = denominator),
+    indicator = "Schnitzer, excl. dental caries"
+    ) %>%
+  select(indicator, age_group, case, sex, n_prop) %>%
+  arrange(case, sex, age_group) %>%
+  pivot_wider(names_from = c("case","sex"), values_from = "n_prop")
+  
+
 # transformed$mother_died <-
 #   tables_long$mother_died %>%
 #   filter(age_group != "all") %>%  # only show separate age groups, not combined
@@ -305,7 +321,7 @@ transformed$mh_main_diag <-
 table_mvr_schnitzer_mh <-
   bind_rows(
     # transformed[c("mvr_all_types", "schnitzer_all_types", "mother_died", "mh_main_diag")]
-    transformed[c("mvr_all_types", "schnitzer_all_types", "maternal_death", "mh_main_diag")]
+    transformed[c("mvr_all_types", "schnitzer_all_types", "schnitzer_excluding_dental_caries", "maternal_death", "mh_main_diag")]
   )
 
 transformed$icd_main_diag <-
@@ -557,18 +573,39 @@ write.xlsx(x = transformed_recalculated[c("distribution_geo_carstairs_quintile",
 write.xlsx(x = transformed$not_in_work, file = "../Publications/Results paper 1/Table_not_in_work.xlsx")
 ```
 
+
+## Copying to clipboard for use with excel files
+
+```{r}
+if (interactive()) {  # run only in interactive mode
+  
+tables$icd_main_diag_only %>% filter(age_group=="<18" & sex!="both") %>% select(case, sex, denominator) %>% distinct %>% arrange(case,desc(sex)) %>% mutate(text = paste0(str_to_sentence(sex)," N=",format(denominator,trim = TRUE,big.mark = ","))) %>% .$text %>% write.table("clipboard", sep="\t", row.names = FALSE, col.names = FALSE, quote = TRUE)
+
+tables$icd_main_and_other_diag %>% filter(age_group=="<18" & sex!="both") %>% select(case, sex, denominator) %>% distinct %>% arrange(case,desc(sex)) %>% mutate(text = paste0(str_to_sentence(sex)," N=",format(denominator,trim = TRUE,big.mark = ","))) %>% .$text %>% write.table("clipboard", sep="\t", row.names = FALSE, col.names = FALSE, quote = TRUE)
+
+transformed$schnitzer_excluding_dental_caries %>% write.table("clipboard", sep="\t", row.names = FALSE, col.names = FALSE)
+
+}
+```
+
+
 # Checking outputs
 
 ## ICD chapter classiciation counts not adding up to 100%
 
 ```{r}
 # TODO: the original table counted codes rather than episodes; and doublecounted some MAIN diag codes also
+
+if (interactive()) {
+  
+
 tables$icd_main_and_other_diag %>% mutate(n = if_else(n_prop=="<=10", NA_real_,parse_number(str_extract(n_prop, pattern="^\\d+")))) %>%
   group_by(case, age_group, sex) %>% summarise(sum_n=sum(n,na.rm = TRUE),denom=unique(denominator))
 
 tables$icd_main_diag_only %>% mutate(n = if_else(n_prop=="<=10", NA_real_,parse_number(str_extract(n_prop, pattern="^\\d+")))) %>%
   group_by(case, age_group, sex) %>% summarise(sum_n=sum(n,na.rm = TRUE),denom=unique(denominator))
 
+}
 ```
 
 
