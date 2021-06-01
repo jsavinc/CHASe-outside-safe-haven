@@ -1,0 +1,259 @@
+---
+title: "Format regression tables exported from Safe Haven for results paper"
+author: "Jan Savinc"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Libraries required
+
+```{r}
+library(tidyverse)  # for data manipulation
+library(openxlsx)  # for writing excel files
+library(readxl)  # for reading excel files
+```
+
+# Read tables
+
+```{r}
+order_icd_chapters <-
+  c(
+    "Infectious and parasitic diseases",
+    "Neoplasms",
+    "Endocrine, nutritional and metabolic diseases, and immunity disorders",
+    "Diseases of the blood and blood-forming organs",
+    "Diseases of the nervous system and the sense organs",
+    "Mental disorders",
+    "Diseases of the circulatory system",
+    "Diseases of the respiratory system",
+    "Diseases of the digestive system",
+    "Diseases of the genitourinary system",
+    "Complications of pregnancy, childbirth, and the puerperium",
+    "Diseases of the skin and subcutaneous tissue",
+    "Diseases of the musculoskeletal system and connective tissue",
+    "Congenital anomalies",
+    "Certain conditions originating in the perinatal period",
+    "Symptoms, signs, and ill-defined conditions",
+    "Injury and poisoning",
+    "Supplementary classification of factors influencing health status and contact with health services"
+  )
+
+regression_adversities_female <- read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/01_adversities_and_geography/table_regression_results_female_adversities.xlsx", sheet = "multiple reg., simplified")
+
+regression_adversities_male <- read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/01_adversities_and_geography/table_regression_results_male_adversities.xlsx", sheet = "multiple reg., simplified")
+
+regression_subcategorised_adversities_female <- read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/02_adversities_subcategorised/table_regression_results_female_adversities.xlsx", sheet = "multiple reg., simplified")
+
+regression_subcategorised_adversities_male <- read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/02_adversities_subcategorised/table_regression_results_male_adversities.xlsx", sheet = "multiple reg., simplified")
+```
+
+## Variable names
+
+```{r}
+table_variable_names <-
+  tribble(
+    ~short_name, ~long_name,
+    "n_episodes_mvr_under_18_factor", "MVR episodes, aged <18",
+    "n_episodes_ccs_under_18_factor", "MH episodes, aged <18",
+    "n_episodes_schnitzer_without_caries_under_10_factor", "Episodes with codes suggestive of maltreatment or neglect (Schnitzer et al., 2011), excluding dental caries, aged <10",
+    "n_episodes_poisoning_under_18_factor", "Poisoning episodes, aged <18",
+    "mother_died_before_age_18", "Maternal death, aged <18",
+    "care_experienced_or_no_fixed_abode_before_age_18", "Episodes indicating care experience or no fixed abode, aged <18",
+    "n_episodes_mvr_assault_maltreatment_under_18_factor", "MVR episodes: assault or maltreatment, aged <18",
+    "n_episodes_mvr_social_or_undetermined_under_18_factor", "MVR episodes: adverse soc. circumstances or undetermined intent, aged <18",
+    "n_episodes_ccs_self_harm_under_18_factor", "MH episodes: self harm, aged <18",
+    "n_episodes_ccs_alcohol_under_18_factor", "MH episodes: alcohol-related, aged <18",
+    "n_episodes_ccs_not_self_harm_or_alcohol_under_18_factor", "MH episodes: neither self harm nor alcohol-related, aged <18"
+  )
+```
+
+
+# Process tables
+
+
+For the "simple" adversities table, we include all adversities including Schnitzer codes without dental caries, but not the geographical variables. These are models F2 and M2 in the outputs!
+
+```{r}
+regression_table_simple_adversities <-
+  full_join(
+    regression_adversities_female %>% select(variable, level, F2_or, F2_global_p),
+    regression_adversities_male %>% select(variable, level, M2_or, M2_global_p),
+    by = c("variable","level")
+  ) %>%
+  filter(!variable %in% c("Urban_rural_aggregated_4")) %>%
+  mutate(  # rename variables to long form, descriptive names
+    variable = table_variable_names$long_name[match(x = variable, table = table_variable_names$short_name)]
+  ) %>%
+  rename(
+    Variable = variable,
+    Level = level,
+    "OR, Female" = F2_or,
+    "p, Female" = F2_global_p,
+    "OR, Male" = M2_or,
+    "p, Male" = M2_global_p,
+  )
+```
+
+
+For the "subcategorised" adversities table, we include all subcategoriesd adversities including Schnitzer codes without dental caries, but not the geographical variables. These are models F5 and M5 in the outputs!
+
+```{r}
+regression_table_subcategorised_adversities <-
+  full_join(
+    regression_subcategorised_adversities_female %>% select(variable, level, F5_or, F5_global_p),
+    regression_subcategorised_adversities_male %>% select(variable, level, M5_or, M5_global_p),
+    by = c("variable","level")
+  ) %>%
+  filter(!variable %in% c("Urban_rural_aggregated_4")) %>%
+  mutate(  # rename variables to long form, descriptive names
+    variable = table_variable_names$long_name[match(x = variable, table = table_variable_names$short_name)]
+  ) %>%
+  rename(
+    Variable = variable,
+    Level = level,
+    "OR, Female" = F5_or,
+    "p, Female" = F5_global_p,
+    "OR, Male" = M5_or,
+    "p, Male" = M5_global_p,
+  )
+```
+
+# Save regression tables
+
+```{r}
+write.xlsx(x = regression_table_simple_adversities, file = "../Publications/Results paper 1/Table_multiple_regression_simple.xlsx")
+write.xlsx(x = regression_table_subcategorised_adversities, file = "../Publications/Results paper 1/Table_multiple_regression_subcategorised.xlsx")
+```
+
+
+# OR plots
+
+## Read data
+
+For the regression tables, I opted to use the simplified tables i made in the safe haven; for OR plots, we need access to confidence interval estimates, so I'll load the data again, but from the more detailed outputs!
+
+```{r}
+detailed_regressions_simple_female <-
+  read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/01_adversities_and_geography/table_regression_results_female_adversities.xlsx", sheet = "multiple regression")
+
+detailed_regressions_simple_male <-
+  read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/01_adversities_and_geography/table_regression_results_male_adversities.xlsx", sheet = "multiple regression")
+
+detailed_regressions_subcategorised_female <-
+  read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/02_adversities_subcategorised/table_regression_results_female_adversities.xlsx", sheet = "multiple regression")
+
+detailed_regressions_subcategorised_male <-
+  read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/02_adversities_subcategorised/table_regression_results_male_adversities.xlsx", sheet = "multiple regression")
+```
+
+## Process data
+
+Again, we'll use the models with Schnitzer episodes included, so F2 & M2
+
+```{r}
+detailed_regressions_simple <-
+  bind_rows(
+    detailed_regressions_simple_female %>% select(variable, level, starts_with("F2")) %>%
+    filter(!variable %in% c("Urban_rural_aggregated_4")) %>%
+    rename_all(~str_remove_all(.x, pattern="F2\\_")) %>%
+    mutate(sex = "Female")
+    ,
+    detailed_regressions_simple_male %>% select(variable, level, starts_with("M2")) %>%
+    filter(!variable %in% c("Urban_rural_aggregated_4")) %>%
+    rename_all(~str_remove_all(.x, pattern="M2\\_")) %>%
+    mutate(sex = "Male")
+  )
+
+detailed_regressions_subcategorised <-
+  bind_rows(
+    detailed_regressions_subcategorised_female %>% select(variable, level, starts_with("F5")) %>%
+    filter(!variable %in% c("Urban_rural_aggregated_4")) %>%
+    rename_all(~str_remove_all(.x, pattern="F5\\_")) %>%
+    mutate(sex = "Female")
+    ,
+    detailed_regressions_subcategorised_male %>% select(variable, level, starts_with("M5")) %>%
+    filter(!variable %in% c("Urban_rural_aggregated_4")) %>%
+    rename_all(~str_remove_all(.x, pattern="M5\\_")) %>%
+    mutate(sex = "Male")
+  )
+```
+
+## Make plots
+
+```{r}
+# TODO: should this include Intercept? Intercept tells us the baseline OR of cases to controls - over 0.1 (because ratio is less than 1:10!)
+
+(
+or_plot_simple_adversities <-
+  detailed_regressions_simple %>%
+  mutate(  # rename variables to long form, descriptive names
+    variable = table_variable_names$long_name[match(x = variable, table = table_variable_names$short_name)],
+    variable = if_else(level == "(Intercept)", level, variable),
+    level = if_else(level %in% c("(Intercept)", "TRUE"), NA_character_, level),
+    variable = if_else(is.na(level), str_wrap(variable, width = 30), paste(str_wrap(variable, width = 30), level, sep = ":\n")),
+    variable = forcats::as_factor(variable) %>% fct_rev(),  # this retains the order!
+  ) %>%
+  ggplot(aes(y = variable, x = or, shape = sex)) +
+  geom_point(position = position_dodge(width=0.5), size = 2.5) +
+  geom_errorbar(aes(xmin = or_ci_low, xmax = or_ci_high), position = position_dodge(width=0.5), width = 0) +
+  theme_minimal() +
+  scale_x_log10(breaks = c(seq(from=0.1, to=0.9, by=0.1), 1:10, 15, 30), labels = c(as.character(seq(from=0.1, to=0.9, by=0.1)), 1:10, 15, 30)) +
+  geom_vline(xintercept = 1, colour = "grey10", linetype = "dashed") +
+  theme(
+    legend.position = "top", 
+    legend.title = element_blank(), 
+    panel.grid.minor.x = element_blank()
+    ) +
+  labs(
+    y = NULL,
+    x = "OR"
+  ) +
+  NULL
+  )
+
+
+(
+or_plot_subcategorised_adversities <-
+  detailed_regressions_subcategorised %>%
+  mutate(  # rename variables to long form, descriptive names
+    variable = table_variable_names$long_name[match(x = variable, table = table_variable_names$short_name)],
+    variable = if_else(level == "(Intercept)", level, variable),
+    level = if_else(level %in% c("(Intercept)", "TRUE"), NA_character_, level),
+    variable = if_else(is.na(level), str_wrap(variable, width = 30), paste(str_wrap(variable, width = 30), level, sep = ":\n")),
+    variable = forcats::as_factor(variable) %>% fct_rev()  # this retains the order!
+  ) %>%
+  ggplot(aes(y = variable, x = or, shape = sex)) +
+  geom_point(position = position_dodge(width=0.5), size = 2.5) +
+  geom_errorbar(aes(xmin = or_ci_low, xmax = or_ci_high), position = position_dodge(width=0.5), width = 0) +
+  theme_minimal() +
+  scale_x_log10(breaks = c(seq(from=0.1, to=0.9, by=0.1), 1:10, 15, 30), labels = c(as.character(seq(from=0.1, to=0.9, by=0.1)), 1:10, 15, 30)) +
+  geom_vline(xintercept = 1, colour = "grey10", linetype = "dashed") +
+  theme(
+    legend.position = "top", 
+    legend.title = element_blank(), 
+    panel.grid.minor.x = element_blank()
+    ) +
+  labs(
+    y = NULL,
+    x = "OR"
+  ) +
+  NULL
+  )
+```
+
+## Save plots
+
+```{r}
+or_plot_simple_adversities %>%
+  ggsave(filename = "../Publications/Results paper 1/OR_plot_regression_simple.pdf", device = cairo_pdf, dpi = 300, width = 12, height = 8)
+
+or_plot_subcategorised_adversities %>%
+  ggsave(filename = "../Publications/Results paper 1/OR_plot_regression_subcategorised.pdf", device = cairo_pdf, dpi = 300, width = 12, height = 8)
+```
+
