@@ -255,5 +255,11 @@ or_plot_simple_adversities %>%
 
 or_plot_subcategorised_adversities %>%
   ggsave(filename = "../Publications/Results paper 1/OR_plot_regression_subcategorised.pdf", device = cairo_pdf, dpi = 300, width = 12, height = 8)
+
+or_plot_simple_adversities %>%
+  ggsave(filename = "../Publications/Results paper 1/OR_plot_regression_simple.png", dpi = 1200, width = 12, height = 8)
+
+or_plot_subcategorised_adversities %>%
+  ggsave(filename = "../Publications/Results paper 1/OR_plot_regression_subcategorised.png", dpi = 1200, width = 12, height = 8)
 ```
 
