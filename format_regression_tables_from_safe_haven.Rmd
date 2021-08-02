@@ -44,13 +44,13 @@ order_icd_chapters <-
     "Supplementary classification of factors influencing health status and contact with health services"
   )
 
-regression_adversities_female <- read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/01_adversities_and_geography/table_regression_results_female_adversities.xlsx", sheet = "multiple reg., simplified")
+regression_adversities_female <- read_excel(path = "../Safe Haven Exports/2021-06-16 regressions/regressions/01_adversities_and_geography/table_regression_results_female_adversities.xlsx", sheet = "multiple reg., simplified")
 
-regression_adversities_male <- read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/01_adversities_and_geography/table_regression_results_male_adversities.xlsx", sheet = "multiple reg., simplified")
+regression_adversities_male <- read_excel(path = "../Safe Haven Exports/2021-06-16 regressions/regressions/01_adversities_and_geography/table_regression_results_male_adversities.xlsx", sheet = "multiple reg., simplified")
 
-regression_subcategorised_adversities_female <- read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/02_adversities_subcategorised/table_regression_results_female_adversities.xlsx", sheet = "multiple reg., simplified")
+regression_subcategorised_adversities_female <- read_excel(path = "../Safe Haven Exports/2021-06-16 regressions/regressions/02_adversities_subcategorised/table_regression_results_female_adversities.xlsx", sheet = "multiple reg., simplified")
 
-regression_subcategorised_adversities_male <- read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/02_adversities_subcategorised/table_regression_results_male_adversities.xlsx", sheet = "multiple reg., simplified")
+regression_subcategorised_adversities_male <- read_excel(path = "../Safe Haven Exports/2021-06-16 regressions/regressions/02_adversities_subcategorised/table_regression_results_male_adversities.xlsx", sheet = "multiple reg., simplified")
 ```
 
 ## Variable names
@@ -127,8 +127,8 @@ regression_table_subcategorised_adversities <-
 # Save regression tables
 
 ```{r}
-write.xlsx(x = regression_table_simple_adversities, file = "../Publications/Results paper 1/Table_multiple_regression_simple.xlsx")
-write.xlsx(x = regression_table_subcategorised_adversities, file = "../Publications/Results paper 1/Table_multiple_regression_subcategorised.xlsx")
+write.xlsx(x = regression_table_simple_adversities, file = "../Publications/Results paper 1/Table_multiple_regression_simple_from_r.xlsx")
+write.xlsx(x = regression_table_subcategorised_adversities, file = "../Publications/Results paper 1/Table_multiple_regression_subcategorised_from_r.xlsx")
 ```
 
 
@@ -140,16 +140,16 @@ For the regression tables, I opted to use the simplified tables i made in the sa
 
 ```{r}
 detailed_regressions_simple_female <-
-  read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/01_adversities_and_geography/table_regression_results_female_adversities.xlsx", sheet = "multiple regression")
+  read_excel(path = "../Safe Haven Exports/2021-06-16 regressions/regressions/01_adversities_and_geography/table_regression_results_female_adversities.xlsx", sheet = "multiple regression")
 
 detailed_regressions_simple_male <-
-  read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/01_adversities_and_geography/table_regression_results_male_adversities.xlsx", sheet = "multiple regression")
+  read_excel(path = "../Safe Haven Exports/2021-06-16 regressions/regressions/01_adversities_and_geography/table_regression_results_male_adversities.xlsx", sheet = "multiple regression")
 
 detailed_regressions_subcategorised_female <-
-  read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/02_adversities_subcategorised/table_regression_results_female_adversities.xlsx", sheet = "multiple regression")
+  read_excel(path = "../Safe Haven Exports/2021-06-16 regressions/regressions/02_adversities_subcategorised/table_regression_results_female_adversities.xlsx", sheet = "multiple regression")
 
 detailed_regressions_subcategorised_male <-
-  read_excel(path = "../Safe Haven Exports/2021-05-21 regressions/regressions/02_adversities_subcategorised/table_regression_results_male_adversities.xlsx", sheet = "multiple regression")
+  read_excel(path = "../Safe Haven Exports/2021-06-16 regressions/regressions/02_adversities_subcategorised/table_regression_results_male_adversities.xlsx", sheet = "multiple regression")
 ```
 
 ## Process data
