@@ -54,11 +54,19 @@ The below codes are one-code-per-row listings of inclusions, exclusions (the mal
 
 ## CCS mental-health-related codes
 
-* [`ccs_categories_icd9.csv`](processed_ICD_codes/ccs_categories_icd9.csv)
-* [`ccs_categories_icd10.csv`](processed_ICD_codes/ccs_categories_icd10.csv)
-* [`ccs_category_labels.csv`](processed_ICD_codes/ccs_category_labels.csv)
+*Updated CCS codes*: on review, the data included some mental health-related ICD codes that I missed in the initial cross-mapping for CCS codes. The updated CCS coding with additional codes included is available in the file:
 
-The ICD-9 and ICD-10 files list one code per row, with its corresponding numeric category, which are listed in [`ccs_category_labels.csv`](processed_ICD_codes/ccs_category_labels.csv).
+* [`CCS_codes_updated.csv`](processed_ICD_codes/CCS_codes_updated.csv)
+
+The original CCS coding for mental health-related codes I cross-mapped from ICD-9-CM and ICD-10-CM to ICD-9 and ICD-10, respectively, is available here (crossed out to emphasise the updated version above!):
+
+
+* ~~[`ccs_categories_icd9.csv`](processed_ICD_codes/ccs_categories_icd9.csv)~~
+* ~~[`ccs_categories_icd10.csv`](processed_ICD_codes/ccs_categories_icd10.csv)~~
+* ~~[`ccs_category_labels.csv`](processed_ICD_codes/ccs_category_labels.csv)~~
+
+~~The ICD-9 and ICD-10 files list one code per row, with its corresponding numeric category, which are listed in [`ccs_category_labels.csv`](processed_ICD_codes/ccs_category_labels.csv).~~
+
 
 ## Suicide methods
 
