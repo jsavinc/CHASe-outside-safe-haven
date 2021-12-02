@@ -7,7 +7,7 @@ editor_options:
   chunk_output_type: console
 ---
   
-  ```{r setup, include=FALSE}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -43,6 +43,16 @@ add_odds_ratio_and_ci <- function(data_tbl) {
     )
   )
 }
+
+## helper function for calculating number and proportion
+num_and_prop <- function(numerator, denominator, threshold=10, accuracy=0.01) {
+  n_prop <- case_when(
+    is.na(numerator)|is.na(denominator) ~ NA_character_,
+    numerator < threshold ~ paste0("N<",threshold),
+    TRUE ~ paste0(numerator, " (", scales::percent(numerator/denominator, accuracy = accuracy), ")")
+  )
+  return(n_prop)
+}
 ```
 
 # Load data
@@ -72,12 +82,23 @@ table_poisonings <-
   slice(-c(nrow(.)-1, nrow(.))) %>%  # remove last two rows
   select(-matches("\\s")) %>%  # remove any columns with spaces - these were added in exploration
   mutate(n = str_extract(n_prop, pattern = "^\\d+\\s") %>% as.integer()) %>%
-    filter(age_group!="18+")
+  filter(age_group!="18+")
 
 table_maternal_death <-
-  read_excel(path = "../Safe Haven Exports/2020-10-30/Frequency_table_mothers_death_individuals_with_records_prior_to_death.xlsx", sheet = 1, ) %>% 
+  read_excel(path = "../Safe Haven Exports/2020-10-30/Frequency_table_mothers_death_individuals_with_records_prior_to_death.xlsx", sheet = 1) %>% 
   slice(-nrow(.)) %>%  # remove last row, it's the caption
   filter(age_group!="18+")
+
+table_care_experienced <- 
+  read_excel(path = "../Safe Haven Exports/2019-12-18/1617-0228_Output released/No_fixed_abode_and_cared_for_children.xlsx", sheet = "Cared for children", range = "A7:D9") %>%
+  select(-denominator) %>%  # bigger denominator used for this table
+  mutate(
+    n = str_extract(n_prop, pattern = "^\\d+\\s") %>% as.integer(),
+    age_group = "<18",
+    sex = "both"
+    ) %>%
+  left_join(table_adversities$MVR %>% select(case, sex, age_group, denominator)) %>%
+  mutate(n_prop = num_and_prop(numerator = n, denominator = denominator))  # recalculate with new denominator
 ```
 
 # Tidy up tables into single table
@@ -105,6 +126,11 @@ tidy_maternal_death <-
   select(-denominator_maternal_records, -n_prop_maternal_records) %>%  # these are based on SMR02 denominator rather than the rest of the Paper 1 study
   pivot_wider(names_from = case, values_from = c(n, denominator, n_prop)) %>%
   add_odds_ratio_and_ci()
+
+tidy_care_experienced <-
+  table_care_experienced %>%
+  pivot_wider(names_from = case, values_from = c(n, denominator, n_prop)) %>%
+  add_odds_ratio_and_ci()
 ```
 
 # Save results
@@ -115,7 +141,8 @@ write.xlsx(
     adversities = tidy_adversities,
     ccs_categories = tidy_ccs,
     poisoning = tidy_poisonings,
-    maternal_death = tidy_maternal_death
+    maternal_death = tidy_maternal_death,
+    care_experienced = tidy_care_experienced
   ),
   file = "C:/Users/40011625/OneDrive - Edinburgh Napier University/CHASE Publications/Results paper 1/descriptives_ors_adversities_and_ccs.xlsx",
   overwrite = TRUE
