@@ -61,7 +61,8 @@ table_variable_names <-
     ~short_name, ~long_name,
     "n_episodes_mvr_under_18_factor", "MVR episodes, aged <18",
     "n_episodes_ccs_under_18_factor", "MH episodes, aged <18",
-    "n_episodes_schnitzer_without_caries_under_10_factor", "Episodes with codes suggestive of maltreatment or neglect (Schnitzer et al., 2011), excluding dental caries, aged <10",
+    # "n_episodes_schnitzer_without_caries_under_10_factor", "Episodes with codes suggestive of maltreatment or neglect (Schnitzer et al., 2011), excluding dental caries, aged <10",
+    "n_episodes_schnitzer_without_caries_under_10_factor", "Episodes with codes suggestive of maltreatment or neglect, excluding dental caries, aged <10",
     "n_episodes_poisoning_under_18_factor", "Poisoning episodes, aged <18",
     "mother_died_before_age_18", "Maternal death, aged <18",
     "care_experienced_or_no_fixed_abode_before_age_18", "Episodes indicating care experience or no fixed abode, aged <18",
@@ -189,6 +190,8 @@ detailed_regressions_subcategorised <-
 ```{r}
 # TODO: should this include Intercept? Intercept tells us the baseline OR of cases to controls - over 0.1 (because ratio is less than 1:10!)
 
+wrap_width = 50  # to control how wide the variable labels are spread
+
 (
 or_plot_simple_adversities <-
   detailed_regressions_simple %>%
@@ -225,7 +228,7 @@ or_plot_subcategorised_adversities <-
     variable = table_variable_names$long_name[match(x = variable, table = table_variable_names$short_name)],
     variable = if_else(level == "(Intercept)", level, variable),
     level = if_else(level %in% c("(Intercept)", "TRUE"), NA_character_, level),
-    variable = if_else(is.na(level), str_wrap(variable, width = 30), paste(str_wrap(variable, width = 30), level, sep = ":\n")),
+    variable = if_else(is.na(level), str_wrap(variable, width = wrap_width), paste(str_wrap(variable, width = wrap_width), level, sep = ":\n")),
     variable = forcats::as_factor(variable) %>% fct_rev()  # this retains the order!
   ) %>%
   ggplot(aes(y = variable, x = or, shape = sex)) +
@@ -237,11 +240,12 @@ or_plot_subcategorised_adversities <-
   theme(
     legend.position = "top", 
     legend.title = element_blank(), 
-    panel.grid.minor.x = element_blank()
+    panel.grid.minor.x = element_blank(),
+    axis.text.y = element_text(size = 11),
     ) +
   labs(
     y = NULL,
-    x = "OR"
+    x = "Adjusted odds ratio"
   ) +
   NULL
   )
@@ -250,16 +254,19 @@ or_plot_subcategorised_adversities <-
 ## Save plots
 
 ```{r}
-or_plot_simple_adversities %>%
-  ggsave(filename = "../Publications/Results paper 1/OR_plot_regression_simple.pdf", device = cairo_pdf, dpi = 300, width = 12, height = 8)
-
-or_plot_subcategorised_adversities %>%
-  ggsave(filename = "../Publications/Results paper 1/OR_plot_regression_subcategorised.pdf", device = cairo_pdf, dpi = 300, width = 12, height = 8)
+## changed this on 3 Feb 2022 to save to OneDrive folder
+plot_directory <- "C:/Users/40011625/OneDrive - Edinburgh Napier University/CHASE Publications/Results paper 1/"
 
 or_plot_simple_adversities %>%
-  ggsave(filename = "../Publications/Results paper 1/OR_plot_regression_simple.png", dpi = 1200, width = 12, height = 8)
+  ggsave(filename = file.path(plot_directory, "OR_plot_regression_simple.pdf"), device = cairo_pdf, dpi = 300, width = 12, height = 8)
+
+or_plot_simple_adversities %>%
+  ggsave(filename = file.path(plot_directory, "OR_plot_regression_simple.png"), dpi = 1200, width = 12, height = 8)
 
 or_plot_subcategorised_adversities %>%
-  ggsave(filename = "../Publications/Results paper 1/OR_plot_regression_subcategorised.png", dpi = 1200, width = 12, height = 8)
+  ggsave(filename = file.path(plot_directory, "OR_plot_regression_subcategorised.pdf"), device = cairo_pdf, dpi = 300, width = 13, height = 8)
+
+or_plot_subcategorised_adversities %>%
+  ggsave(filename = file.path(plot_directory, "OR_plot_regression_subcategorised.png"), dpi = 1200, width = 13, height = 8)
 ```
 
