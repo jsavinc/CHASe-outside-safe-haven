@@ -1,0 +1,80 @@
+---
+title: "Calculate population estimate of young people in Scotland"
+author: "Jan Savinc"
+date: "21/03/2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Libraries required
+
+```{r}
+library(tidyverse)  # for data manipulation
+library(readxl)  # for reading excel files
+```
+
+# Download data
+
+We are downloading the NRS mid-year population estimate for 2020, published on 25 June 2021.
+
+```{r}
+url_population_estimate_2020 <- "https://www.nrscotland.gov.uk/files//statistics/population-estimates/mid-20/mid-year-pop-est-20-data.xlsx"
+
+path_population_estimate_2020 <- file.path("./population_estimates", basename(url_population_estimate_2020))
+
+## for some reason, the file downloaded with download.file() couldn't be opened in excel or read_excel()
+# if (!file.exists(path_population_estimate_2020)) download.file(url = url_population_estimate_2020, destfile = path_population_estimate_2020, quiet = TRUE, method = "curl")
+## the solution is to use curl::curl_download instead!
+if (!file.exists(path_population_estimate_2020)) curl::curl_download(url = url_population_estimate_2020, destfile = path_population_estimate_2020, quiet = FALSE)
+```
+
+# Read data 
+
+```{r}
+excel_sheets(path_population_estimate_2020)
+
+persons_by_age <-
+  read_excel(path = path_population_estimate_2020, sheet = "Table 1", range = "A3:D26") %>%
+  janitor::clean_names() %>%
+  mutate(age = as.integer(age)) %>%
+  drop_na(age)
+```
+
+# Summaries
+
+```{r}
+summaries <-
+  bind_rows(
+    persons_by_age %>%
+    filter(age %in% 0:9) %>%
+    summarise_all(~sum(.x)) %>%
+    mutate(age = "under 10s")
+    ,
+    persons_by_age %>%
+    filter(age %in% 0:17) %>%
+    summarise_all(~sum(.x)) %>%
+    mutate(age = "under 18s")
+    ,
+    persons_by_age %>%
+    filter(age %in% 10:17) %>%
+    summarise_all(~sum(.x)) %>%
+    mutate(age = "10-17")
+  )
+
+## display, with option to download .csv
+DT::datatable(summaries, extensions = "Buttons", options = list(dom = "Bfrtip", 
+                                                          buttons = c("csv")))
+```
+
+
+# Session info
+
+```{r}
+sessionInfo()
+```
+
