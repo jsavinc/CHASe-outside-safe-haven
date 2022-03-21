@@ -1,0 +1,151 @@
+---
+title: "Transform tables exported from Safe Haven for results paper"
+author: "Jan Savinc"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+This is a script that formats the descriptive stats tables exported from the safe haven and adds an odds ratio (OR) to the data for comparing cases to controls.
+
+# Libraries required
+
+```{r}
+library(tidyverse)  # for data manipulation
+library(openxlsx)  # for writing excel files
+library(readxl)  # for reading excel files
+```
+
+# Functions
+
+```{r}
+## this assumes you have a n_case, denominator_case and n_control, denominator_control variables
+add_odds_ratio_and_ci <- function(data_tbl) {
+  data_tbl %>%
+  mutate(
+    or = (n_case/(denominator_case-n_case))/(n_control/(denominator_control-n_control)),
+    or_low = exp(log(or)+(qnorm(0.025)*sqrt(1/n_case+1/(denominator_case-n_case)+1/(n_control)+1/(denominator_control-denominator_case)))),
+    or_high = exp(log(or)+(qnorm(0.975)*sqrt(1/n_case+1/(denominator_case-n_case)+1/(n_control)+1/(denominator_control-denominator_case)))),
+    or_formatted = paste0(  # construct a neat OR with CI, e.g. 1.23 [0.95-1.95]
+      format(or, nsmall = 2, digits = 2, trim = TRUE),
+      " [",
+      format(or_low, nsmall = 2, digits = 2, trim = TRUE),
+      "-",
+      format(or_high, nsmall = 2, digits = 2, trim = TRUE),
+      "]"
+    )
+  )
+}
+
+## helper function for calculating number and proportion
+num_and_prop <- function(numerator, denominator, threshold=10, accuracy=0.01) {
+  n_prop <- case_when(
+    is.na(numerator)|is.na(denominator) ~ NA_character_,
+    numerator < threshold ~ paste0("N<",threshold),
+    TRUE ~ paste0(numerator, " (", scales::percent(numerator/denominator, accuracy = accuracy), ")")
+  )
+  return(n_prop)
+}
+```
+
+# Load data
+
+```{r}
+table_adversities <- map(
+  .x = c(1,2,4),  # skip 3, which is CCS, main diag only
+  .f = ~read_excel(path = "../Safe Haven Exports/2021-06-16 regressions/Frequency_table_MVR_Schnitzer_CCS_index_episodes_individuals_with_records_prior_to_death.xlsx", sheet = .x) %>% slice(-nrow(.)) %>% filter(age_group!="18+")
+) %>% 
+  set_names(x = ., nm = c("MVR","Schnitzer","CCS"))
+
+table_adversities$Schnitzer_without_caries <-
+  read_excel(path = "../Safe Haven Exports/Schnitzer_codes_investigated_2020-07-21/Frequency_table_schnitzer_codes_without_dental_caries.xlsx", sheet = "Individuals") %>% 
+  slice(-nrow(.)) %>%  # remove the last row, being the caption
+  left_join(table_adversities$Schnitzer %>% select(case, sex, age_group, denominator)) %>%
+  rename(n_prop = neglect) %>%
+  mutate(n = str_extract(n_prop, pattern = "^\\d+\\s") %>% as.integer())
+
+table_ccs <- read_excel(path = "../Safe Haven Exports/2021-06-16 regressions/Frequency_table_ccs_categories.xlsx") %>% slice(-nrow(.)) %>%
+  filter(age_group=="<18") %>%
+  select(-denominator, -diagnosis) %>%
+  left_join(table_adversities$MVR %>% select(case, sex, age_group, denominator)) %>%
+  mutate(n = str_extract(n_prop, pattern = "^\\d+\\s") %>% as.integer())
+
+table_poisonings <- 
+  read_excel(path = "../Safe Haven Exports/Results_paper_1_tables, 2020-09-14/Frequency_table_poisonings_by_intent.xlsx", sheet = 1) %>%
+  slice(-c(nrow(.)-1, nrow(.))) %>%  # remove last two rows
+  select(-matches("\\s")) %>%  # remove any columns with spaces - these were added in exploration
+  mutate(n = str_extract(n_prop, pattern = "^\\d+\\s") %>% as.integer()) %>%
+  filter(age_group!="18+")
+
+table_maternal_death <-
+  read_excel(path = "../Safe Haven Exports/2020-10-30/Frequency_table_mothers_death_individuals_with_records_prior_to_death.xlsx", sheet = 1) %>% 
+  slice(-nrow(.)) %>%  # remove last row, it's the caption
+  filter(age_group!="18+")
+
+table_care_experienced <- 
+  read_excel(path = "../Safe Haven Exports/2019-12-18/1617-0228_Output released/No_fixed_abode_and_cared_for_children.xlsx", sheet = "Cared for children", range = "A7:D9") %>%
+  select(-denominator) %>%  # bigger denominator used for this table
+  mutate(
+    n = str_extract(n_prop, pattern = "^\\d+\\s") %>% as.integer(),
+    age_group = "<18",
+    sex = "both"
+    ) %>%
+  left_join(table_adversities$MVR %>% select(case, sex, age_group, denominator)) %>%
+  mutate(n_prop = num_and_prop(numerator = n, denominator = denominator))  # recalculate with new denominator
+```
+
+# Tidy up tables into single table
+
+```{r}
+tidy_adversities <-
+  table_adversities %>%
+  map_dfr(.x = ., .f = ~.x, .id = "adversity") %>%
+  select(-c(category_mvr,maltreatment_type_schnitzer_2011)) %>%
+  pivot_wider(names_from = case, values_from = c(n, denominator, n_prop)) %>%
+  add_odds_ratio_and_ci()
+
+tidy_ccs <-
+  table_ccs %>%
+  pivot_wider(names_from = case, values_from = c(n, denominator, n_prop)) %>%
+  add_odds_ratio_and_ci()
+
+tidy_poisonings <-
+  table_poisonings %>%
+  pivot_wider(names_from = case, values_from = c(n, denominator, n_prop)) %>%
+  add_odds_ratio_and_ci()
+
+tidy_maternal_death <-
+  table_maternal_death %>%
+  select(-denominator_maternal_records, -n_prop_maternal_records) %>%  # these are based on SMR02 denominator rather than the rest of the Paper 1 study
+  pivot_wider(names_from = case, values_from = c(n, denominator, n_prop)) %>%
+  add_odds_ratio_and_ci()
+
+tidy_care_experienced <-
+  table_care_experienced %>%
+  pivot_wider(names_from = case, values_from = c(n, denominator, n_prop)) %>%
+  add_odds_ratio_and_ci()
+```
+
+# Save results
+
+```{r}
+write.xlsx(
+  x = list(
+    adversities = tidy_adversities,
+    ccs_categories = tidy_ccs,
+    poisoning = tidy_poisonings,
+    maternal_death = tidy_maternal_death,
+    care_experienced = tidy_care_experienced
+  ),
+  file = "C:/Users/40011625/OneDrive - Edinburgh Napier University/CHASE Publications/Results paper 1/descriptives_ors_adversities_and_ccs.xlsx",
+  overwrite = TRUE
+)
+```
+
