@@ -16,8 +16,14 @@ icd10 <-
   read_csv("./processed_ICD_codes/master_icd10_code_list_UK(WHO).csv")
 
 ccs_raw <- read_csv("./processed_ICD_codes/CCS_codes_updated.csv")
+
 mvr_codes <- read_csv("./processed_ICD_codes/MVR_codes_merged_condensed_for_appendix.csv") %>%
   rename(mvr_category = category_mvr, mvr_codes_icd9 = codes_icd_9, mvr_codes_icd10 = codes_icd_10)
+
+## Schnitzer codes use a combination of inclusions & exclusions
+## Note - I'll copy these manually
+# schnitzer_codes <- read_csv("./processed_ICD")
+
 
 # wrangle icd codes -------------------------------------------------------
 
@@ -225,7 +231,7 @@ notes_tbl <-
     ) %>%
   add_row(
     Codes = "Schnitzer et al 2011", 
-    Notes = ""
+    Notes = "Codes suggestive of maltreatment or neglect were compiled from Schnitzer, et al. (2011, https://doi.org/10.1016/j.chiabu.2010.06.008), and cross-mapped from the original ICD-9-CM to ICD-9 and ICD-10. Some of the inclusions have an associated set of exclusion codes also, which are listed in a separate sheet."
     )
 
 wb <- createWorkbook()
@@ -233,13 +239,14 @@ addWorksheet(wb, "Notes")
 addWorksheet(wb, "MVR codes")
 addWorksheet(wb, "CCS, ICD-9")
 addWorksheet(wb, "CCS, ICD-10")
+addWorksheet(wb, "Schnitzer inclusions")
+addWorksheet(wb, "Schnitzer exclusions")
 
 writeData(
   wb,
   sheet = "Notes",
   x = notes_tbl
   )
-)
 
 writeData(
   wb,
@@ -249,14 +256,16 @@ writeData(
 
 writeData(
   wb,
-  sheet = "ICD-9",
+  sheet = "CCS, ICD-9",
   x = ccs_icd9_pretty %>% rename("ICD-9 code" = meaning, "CCS Category" = ccs_category)
 )
 writeData(
   wb,
-  sheet = "ICD-10",
+  sheet = "CCS, ICD-10",
   x = ccs_icd10_pretty %>% rename("ICD-10 code" = meaning, "CCS Category" = ccs_category)
 )
+
+# TODO: copy SChnitzer criteria from the pre-processed file "
 
 merging_index_icd9 <-
   ccs_icd9_pretty %>%
@@ -270,7 +279,7 @@ merging_index_icd9 <-
 pwalk(
   .l = merging_index_icd9,
   .f = function(index, start_row, end_row) {
-    mergeCells(wb, sheet = "ICD-9", cols = 2, rows = start_row:end_row)
+    mergeCells(wb, sheet = "CCS, ICD-9", cols = 2, rows = start_row:end_row)
   }
 )
 
@@ -287,7 +296,7 @@ merging_index_icd10 <-
 pwalk(
   .l = merging_index_icd10,
   .f = function(index, start_row, end_row) {
-    mergeCells(wb, sheet = "ICD-10", cols = 2, rows = start_row:end_row)
+    mergeCells(wb, sheet = "CCS, ICD-10", cols = 2, rows = start_row:end_row)
   }
 )
 
