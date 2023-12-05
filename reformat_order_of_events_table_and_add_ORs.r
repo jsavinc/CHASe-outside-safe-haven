@@ -9,14 +9,16 @@ library(openxlsx)  # for writing excel files
 library(readxl)  # for reading excel files
 
 
+
 # Load data ---------------------------------------------------------------
 
 tbl_order_of_events <- 
   read_excel(
-    path = "X:/R1369/CSO FULL grant/Safe Haven Exports/2022-02-02/relative_order_first_adverse_or_mh_event_before_18_and_lifetime.xlsx",
-    sheet = 1, 
-    range = "A1:I31"  # skip the caption in the bottom
-    )
+    path = "X:/R1369/CSO FULL grant/Safe Haven Exports/2023-10-20 relative order & regressions continued/relative_order_first_adverse_or_mh_event_before_18_and_lifetime_corrected.xlsx",
+    # path = "X:/R1369/CSO FULL grant/Safe Haven Exports/2022-02-02/relative_order_first_adverse_or_mh_event_before_18_and_lifetime.xlsx",  # that's the older, incorrect version!
+    sheet = 1
+    ) %>%
+  filter(!str_starts(case, pattern= "Frequency of"))  # remove footnote
 
 # Helper functions --------------------------------------------------------
 
@@ -39,12 +41,27 @@ add_odds_ratio_and_ci <- function(data_tbl) {
 }
 
 
+
 # Reformat table ----------------------------------------------------------
 
 tbl_reformated <- 
   tbl_order_of_events %>%
+  mutate(across(c(n_under_18, n_lifetime, denominator), as.integer)) %>%
   select(-c(n_lifetime, n_prop_lifetime, max_days_apart)) %>%  # only reporting <18 data, not lifetime data
   rename(n = n_under_18, n_prop = n_prop_under_18) %>%
+  mutate(  # suppress small numbers
+    n = if_else(
+      order == "mh, adversity",
+      true = round(n, digits = -1),  # round to nearest 10
+      false = n
+    ),
+    order = if_else(
+      order == "mh, adversity",
+      true = "mh, adversity*",  # add asterisk so I can explain rounding in footnote
+      false = order
+    ),
+    n_prop = glue::glue("{scales::comma(n)} ({scales::label_percent(accuracy = 0.1)(n/denominator)})"),
+  ) %>%
   pivot_wider(names_from = case, values_from = c(n, denominator, n_prop)) %>%
   add_odds_ratio_and_ci
 
@@ -53,7 +70,8 @@ tbl_clean <-
   select(-c(n_case, n_control, denominator_case, denominator_control, or, or_low, or_high)) %>%
   mutate(
     sex = factor(sex, levels = c("both", "male", "female"), labels = c("Both", "Male", "Female")),
-    order = factor(order, levels = unique(order), labels = c("Adversity, then MH", "MH, then Adversity", "Both simultaneously", "Adversity only", "MH only"))
+    # order = factor(order, levels = unique(order), labels = c("Adversity, then MH", "MH, then Adversity", "Both simultaneously", "Adversity only", "MH only"))
+    order = factor(order, levels = unique(order), labels = c("Adversity, then MH", "MH, then Adversity*", "Both simultaneously", "Adversity only", "MH only"))  # added asterisk to MH, then adversity
   ) %>%
   arrange(
     sex, order
